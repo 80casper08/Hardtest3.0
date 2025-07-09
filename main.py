@@ -27,7 +27,7 @@ Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
 
 # --- Завантаження токена ---
 load_dotenv()
-TOKEN = os.getenv("token")
+TOKEN = os.getenv("TOKEN")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
