@@ -67,6 +67,27 @@ async def cmd_start(message: types.Message):
 
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
+    full_name = message.from_user.full_name
+    username = message.from_user.username or "немає"
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | @{username} | Почав тест {message.text}n")
+
+    try:
+        await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест {message.text}")
+    except:
+        pass
+    full_name = message.from_user.full_name
+    username = message.from_user.username or "немає"
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | @{username} | Почав тест {message.text}
+")
+
+    try:
+        await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест {message.text}")
+    except:
+        pass
     category = message.text
     questions = sections[category][:20]
     await state.set_state(QuizState.category)
@@ -105,11 +126,24 @@ async def send_question(message_or_callback, state: FSMContext):
             grade = "👌 Задовільно"
 
         result = (
-            "📊 *Результат тесту:*\n\n"
-            f"✅ *Правильних відповідей:* {correct} з {len(questions)}\n"
-            f"📈 *Успішність:* {percent}%\n"
+            "📊 *Результат тесту:*
+
+"
+            f"✅ *Правильних відповідей:* {correct} з {len(questions)}
+"
+            f"📈 *Успішність:* {percent}%
+"
             f"🏆 *Оцінка:* {grade}"
         )
+
+        # Повідомлення адміну про результат
+        try:
+            full_name = message_or_callback.from_user.full_name
+            username = message_or_callback.from_user.username or "немає"
+            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив {data['category']}
+✅ {correct} з {len(questions)} ({percent}%) – {grade}")
+        except:
+            pass
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔁 Пройти ще раз", callback_data="restart")],
@@ -192,6 +226,27 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 # --- Hard Test ---
 @dp.message(F.text == "💪 Hard Test")
 async def start_hard_test(message: types.Message, state: FSMContext):
+    full_name = message.from_user.full_name
+    username = message.from_user.username or "немає"
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | @{username} | Почав тест 💪 Hard Testn")
+
+    try:
+        await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест 💪 Hard Test")
+    except:
+        pass
+    full_name = message.from_user.full_name
+    username = message.from_user.username or "немає"
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | @{username} | Почав тест 💪 Hard Test
+")
+
+    try:
+        await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест 💪 Hard Test")
+    except:
+        pass
     await state.clear()
     await state.set_state(HardTestState.question_index)
     await state.update_data(
@@ -289,6 +344,44 @@ async def send_hard_question(chat_id, state: FSMContext):
             user_selected = set(selected_all[i])
             if correct_indices == user_selected:
                 correct += 1
+
+        try:
+            full_name = (await bot.get_chat(chat_id)).full_name
+            username = (await bot.get_chat(chat_id)).username or "немає"
+            percent = round(correct / len(hard_questions) * 100)
+            grade = "❌ Погано"
+            if percent >= 90:
+                grade = "💯 Відмінно"
+            elif percent >= 70:
+                grade = "👍 Добре"
+            elif percent >= 50:
+                grade = "👌 Задовільно"
+            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив 💪 Hard Testn✅ {correct} з {len(hard_questions)} ({percent}%) – {grade}")
+        except:
+            pass
+
+        # Повідомлення адміну про результат
+        try:
+            full_name = (await bot.get_chat(chat_id)).full_name
+            username = (await bot.get_chat(chat_id)).username or "немає"
+            percent = round(correct / len(hard_questions) * 100)
+            grade = "❌ Погано"
+            if percent >= 90:
+                grade = "💯 Відмінно"
+            elif percent >= 70:
+                grade = "👍 Добре"
+            elif percent >= 50:
+                grade = "👌 Задовільно"
+            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив 💪 Hard Test
+✅ {correct} з {len(hard_questions)} ({percent}%) – {grade}")
+        except:
+            pass
+        correct = 0
+        for i, q in enumerate(hard_questions):
+            correct_indices = {j for j, (_, ok) in enumerate(q["options"]) if ok}
+            user_selected = set(selected_all[i])
+            if correct_indices == user_selected:
+                correct += 1
         await bot.send_message(chat_id,
             f"📊 Результат тесту: {correct} з {len(hard_questions)}",
             reply_markup=InlineKeyboardMarkup(
@@ -326,3 +419,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+
