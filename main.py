@@ -10,6 +10,7 @@ from flask import Flask
 from threading import Thread
 from dotenv import load_dotenv
 from questions import op_questions, general_questions, lean_questions, qr_questions
+from hard_questions import questions as hard_questions
 
 # --- Flask для Render ---
 app = Flask(__name__)
@@ -33,18 +34,19 @@ dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_ID = 710633503
 
-# --- Основний FSM для класичних тестів ---
+# --- FSM ---
 class QuizState(StatesGroup):
     category = State()
     question_index = State()
     selected_options = State()
+    temp_selected = State()
 
-# --- FSM для Hard Test ---
 class HardTestState(StatesGroup):
     question_index = State()
     selected_options = State()
     temp_selected = State()
     current_message_id = State()
+    current_options = State()
 
 # --- Розділи ---
 sections = {
@@ -54,10 +56,7 @@ sections = {
     "🎲QR🎲": qr_questions
 }
 
-# --- Hard Test Питання ---
-from hard_questions import questions as hard_questions
-
-# --- Клавіатура головна ---
+# --- Клавіатура ---
 def main_keyboard():
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="💪 Hard Test"))
@@ -72,7 +71,7 @@ def main_keyboard():
 async def cmd_start(message: types.Message):
     await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
 
-# --- Обробка класичних розділів ---
+# --- Класичні тести ---
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
     category = message.text
@@ -81,7 +80,6 @@ async def start_quiz(message: types.Message, state: FSMContext):
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
     await send_question(message, state)
 
-# --- Питання для класичного тесту ---
 async def send_question(message_or_callback, state: FSMContext):
     data = await state.get_data()
     questions = data["questions"]
@@ -198,7 +196,7 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
 
-# --- Хендлер для Hard Test ---
+# --- Хард Тест ---
 @dp.message(F.text == "💪 Hard Test")
 async def start_hard_test(message: types.Message, state: FSMContext):
     await state.clear()
@@ -209,6 +207,66 @@ async def start_hard_test(message: types.Message, state: FSMContext):
         temp_selected=set()
     )
     await send_hard_question(message.chat.id, state)
+
+@dp.callback_query(F.data.startswith("hard_opt_"))
+async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
+    index = int(callback.data.split("_")[2])
+    data = await state.get_data()
+    selected = data.get("temp_selected", set())
+    if index in selected:
+        selected.remove(index)
+    else:
+        selected.add(index)
+    await state.update_data(temp_selected=selected)
+    await send_hard_question(callback.message.chat.id, state)
+
+@dp.callback_query(F.data == "hard_confirm")
+async def confirm_hard_answer(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected = data.get("temp_selected", set())
+    selected_options = data.get("selected_options", [])
+    selected_options.append(list(selected))
+    new_index = data["question_index"] + 1
+    await state.update_data(
+        selected_options=selected_options,
+        question_index=new_index,
+        temp_selected=set()
+    )
+    await send_hard_question(callback.message.chat.id, state)
+
+@dp.callback_query(F.data == "hard_retry")
+async def restart_hard_quiz(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await state.set_state(HardTestState.question_index)
+    await state.update_data(
+        question_index=0,
+        selected_options=[],
+        temp_selected=set()
+    )
+    await send_hard_question(callback.message.chat.id, state)
+
+@dp.callback_query(F.data == "hard_details")
+async def show_hard_details(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected_all = data.get("selected_options", [])
+    text_blocks = []
+
+    for i, q in enumerate(hard_questions):
+        correct_indices = {j for j, (_, ok) in enumerate(q["options"]) if ok}
+        user_selected = set(selected_all[i])
+        if correct_indices != user_selected:
+            user_ans = [q["options"][j][0] for j in user_selected]
+            correct_ans = [q["options"][j][0] for j in correct_indices]
+            block = f"❓ *{q['text']}*\n" \
+                    f"🔴 Ти вибрав: {', '.join(user_ans) if user_ans else 'нічого'}\n" \
+                    f"✅ Правильно: {', '.join(correct_ans)}"
+            text_blocks.append(block)
+
+    if not text_blocks:
+        await bot.send_message(callback.message.chat.id, "🥳 Всі відповіді правильні!")
+    else:
+        for block in text_blocks:
+            await bot.send_message(callback.message.chat.id, block, parse_mode="Markdown")
 
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
@@ -226,8 +284,8 @@ async def send_hard_question(chat_id, state: FSMContext):
             f"📊 Результат тесту: {correct} з {len(hard_questions)}",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="details")],
-                    [InlineKeyboardButton(text="🔄 Пройти ще раз", callback_data="retry")]
+                    [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="hard_details")],
+                    [InlineKeyboardButton(text="🔄 Пройти ще раз", callback_data="hard_retry")]
                 ]
             )
         )
@@ -240,8 +298,8 @@ async def send_hard_question(chat_id, state: FSMContext):
     buttons = []
     for i, (text, _) in options:
         prefix = "◻️ "
-        buttons.append([InlineKeyboardButton(text=prefix + text, callback_data=f"opt_{i}")])
-    buttons.append([InlineKeyboardButton(text="Підтвердити", callback_data="confirm")])
+        buttons.append([InlineKeyboardButton(text=prefix + text, callback_data=f"hard_opt_{i}")])
+    buttons.append([InlineKeyboardButton(text="Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     previous_id = data.get("current_message_id")
