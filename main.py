@@ -71,9 +71,7 @@ async def start_quiz(message: types.Message, state: FSMContext):
     username = message.from_user.username or "немає"
 
     with open("logs.txt", "a", encoding="utf-8") as f:
-        f.write(f"{full_name} | @{username} | Почав тест {message.text}
-")
-
+        f.write(f"{full_name} | @{username} | Почав тест {message.text}\n")
     try:
         await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест {message.text}")
     except:
