@@ -72,7 +72,7 @@ sections = {
 
 def main_keyboard():
     buttons = [types.KeyboardButton(text=section) for section in sections]
-    buttons.append(types.KeyboardButton(text="💪 Hard Test"))
+    buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
 
 @dp.message(F.text == "/start")
@@ -192,9 +192,9 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
     await callback.message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
 
 # ---------- HARD TEST ----------
-@dp.message(F.text == "💪 Hard Test")
+@dp.message(F.text == "👀Hard Test👀")
 async def start_hard_test(message: types.Message, state: FSMContext):
-    log_result(message.from_user, "💪 Hard Test", started=True)
+    log_result(message.from_user, "👀Hard Test👀", started=True)
     await state.clear()
     await state.set_state(HardTestState.question_index)
     await state.update_data(question_index=0, selected_options=[], temp_selected=set())
@@ -213,7 +213,7 @@ async def send_hard_question(chat_id, state: FSMContext):
             if correct_indices == user_selected:
                 correct += 1
         percent = round(correct / len(hard_questions) * 100)
-        log_result(await bot.get_chat(chat_id), "💪 Hard Test", percent)
+        log_result(await bot.get_chat(chat_id), "👀Hard Test👀", percent)
 
         await bot.send_message(chat_id,
             f"📊 Результат тесту: {correct} з {len(hard_questions)}",
