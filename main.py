@@ -77,6 +77,58 @@ async def start_quiz(message: types.Message, state: FSMContext):
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
     await send_question(message, state)
 
+@dp.callback_query(F.data.startswith("opt_"))
+async def toggle_option(callback: CallbackQuery, state: FSMContext):
+    index = int(callback.data.split("_")[1])
+    data = await state.get_data()
+    selected = data.get("temp_selected", set())
+    if index in selected:
+        selected.remove(index)
+    else:
+        selected.add(index)
+    await state.update_data(temp_selected=selected)
+    await send_question(callback, state)
+
+@dp.callback_query(F.data == "confirm")
+async def confirm_answer(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    selected = data.get("temp_selected", set())
+    selected_options = data.get("selected_options", [])
+    selected_options.append(list(selected))
+    await state.update_data(
+        selected_options=selected_options,
+        question_index=data["question_index"] + 1,
+        temp_selected=set()
+    )
+    await send_question(callback, state)
+
+@dp.callback_query(F.data == "details")
+async def show_details(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    wrongs = data.get("wrong_answers", [])
+    if not wrongs:
+        await callback.message.answer("✅ Усі відповіді правильні!")
+        return
+    for item in wrongs:
+        text = f"❌ *{item['question']}*
+"
+        for idx, (opt_text, _) in enumerate(item["options"]):
+            mark = "☑️" if idx in item["selected"] else "🔘"
+            text += f"{mark} {opt_text}
+"
+        selected_text = [item["options"][i][0] for i in item["selected"]] if item["selected"] else ["—"]
+        correct_text = [item["options"][i][0] for i in item["correct"]]
+        text += f"
+_Твоя відповідь:_ {', '.join(selected_text)}"
+        text += f"
+_Правильна відповідь:_ {', '.join(correct_text)}"
+        await callback.message.answer(text, parse_mode="Markdown")
+
+@dp.callback_query(F.data == "restart")
+async def restart_quiz(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
+    await callback.message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+
 # 💪 Hard Test старт
 @dp.message(F.text == "💪 Hard Test")
 async def start_hard_test(message: types.Message, state: FSMContext):
