@@ -71,7 +71,8 @@ async def start_quiz(message: types.Message, state: FSMContext):
     username = message.from_user.username or "немає"
 
     with open("logs.txt", "a", encoding="utf-8") as f:
-        f.write(f"{full_name} | @{username} | Почав тест {message.text}n")
+        f.write(f"{full_name} | @{username} | Почав тест {message.text}
+")
 
     try:
         await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест {message.text}")
@@ -130,6 +131,19 @@ async def send_question(message_or_callback, state: FSMContext):
 
 "
             f"✅ *Правильних відповідей:* {correct} з {len(questions)}
+"
+            f"📈 *Успішність:* {percent}%
+"
+            f"🏆 *Оцінка:* {grade}"
+        )
+
+        try:
+            full_name = message_or_callback.from_user.full_name
+            username = message_or_callback.from_user.username or "немає"
+            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив {data['category']}
+✅ {correct} з {len(questions)} ({percent}%) – {grade}")
+        except:
+            pass}
 "
             f"📈 *Успішність:* {percent}%
 "
@@ -230,7 +244,8 @@ async def start_hard_test(message: types.Message, state: FSMContext):
     username = message.from_user.username or "немає"
 
     with open("logs.txt", "a", encoding="utf-8") as f:
-        f.write(f"{full_name} | @{username} | Почав тест 💪 Hard Testn")
+        f.write(f"{full_name} | @{username} | Почав тест 💪 Hard Test
+")
 
     try:
         await bot.send_message(ADMIN_ID, f"👤 {full_name} (@{username}) почав тест 💪 Hard Test")
@@ -356,7 +371,8 @@ async def send_hard_question(chat_id, state: FSMContext):
                 grade = "👍 Добре"
             elif percent >= 50:
                 grade = "👌 Задовільно"
-            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив 💪 Hard Testn✅ {correct} з {len(hard_questions)} ({percent}%) – {grade}")
+            await bot.send_message(ADMIN_ID, f"📬 {full_name} (@{username}) завершив 💪 Hard Test
+✅ {correct} з {len(hard_questions)} ({percent}%) – {grade}")
         except:
             pass
 
