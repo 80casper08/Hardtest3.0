@@ -277,7 +277,6 @@ async def send_hard_question(chat_id, state: FSMContext):
             pass
     msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
     await state.update_data(current_message_id=msg.message_id)
-
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
     index = int(callback.data.split("_")[2])
@@ -285,11 +284,20 @@ async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
     selected = data.get("temp_selected", set())
     selected.symmetric_difference_update({index})
     await state.update_data(temp_selected=selected)
-    options = data["current_options"]
-    buttons = [[InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
-    await bot.edit_message_reply_markup(chat_id=callback.message.chat.id, message_id=data["current_message_id"], reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
+    options = data["current_options"]
+    buttons = [[
+        InlineKeyboardButton(
+            text=("✅ " if i in selected else "◻️ ") + text,
+            callback_data=f"hard_opt_{i}"
+        )
+    ] for i, (text, _) in options]
+    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
+    await bot.edit_message_reply_markup(
+        chat_id=callback.message.chat.id,
+        message_id=data["current_message_id"],
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
+    )
 @dp.callback_query(F.data == "hard_confirm")
 async def confirm_hard_answer(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
