@@ -92,14 +92,18 @@ sections = {
     "🎲QR🎲": qr_questions
 }
 
-def main_keyboard():
+def main_keyboard(user_id=None):
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
+    if str(user_id) == str(ADMIN_ID):
+        buttons.append(types.KeyboardButton(text="ℹ️ Інфо"))
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
+
 
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
-    await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+ await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard(message.from_user.id))
+
 
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
