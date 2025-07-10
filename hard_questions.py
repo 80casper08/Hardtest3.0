@@ -66,7 +66,7 @@ questions = [
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/7.jpg",
         "options": [
             ("1", True),
-            ("2", True),
+            ("2", False),
             ("QR не клеїться", False),
             ("1,2 вірні", False)
         ]
@@ -75,8 +75,8 @@ questions = [
         "text": "8) Чи дозволяється такий варіант накриття захисного ковпачка на платі Multitransmitter?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/8.jpg",
         "options": [
-            ("Так", True),
-            ("Ні", False),
+            ("Так", False),
+            ("Ні", True),
             ("Можливо", False),
             ("Якщо дозволить інспектор", False)
         ]
@@ -298,7 +298,7 @@ questions += [
         "options": [
             ("1", True),
             ("2", False),
-            ("Обидва варіанти правильні", False),
+            ("3", False),
             ("QR не клеїться", False)
         ]
     },
@@ -328,7 +328,7 @@ questions += [
         "options": [
             ("Світлодіод", False),
             ("Конектор", False),
-            ("Все є", True)
+            ("Всі є", True)
         ]
     },
     {
