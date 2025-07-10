@@ -270,7 +270,7 @@ async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
     await state.update_data(temp_selected=selected)
     options = data["current_options"]
     buttons = [[InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="Підтвердити", callback_data="hard_confirm")])
+    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     await bot.edit_message_reply_markup(chat_id=callback.message.chat.id, message_id=data["current_message_id"], reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
 
 @dp.callback_query(F.data == "hard_confirm")
