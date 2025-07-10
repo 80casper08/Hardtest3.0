@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 import random
@@ -264,6 +263,7 @@ async def send_hard_question(chat_id, state: FSMContext):
 
     question = hard_questions[index]
     options = list(enumerate(question["options"]))
+    random.shuffle(options)  
     await state.update_data(current_options=options, temp_selected=set())
     buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
     buttons.append([InlineKeyboardButton(text="✅Підтвердити", callback_data="hard_confirm")])
