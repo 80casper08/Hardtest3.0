@@ -1,3 +1,4 @@
+
 import asyncio
 import os
 import random
@@ -5,13 +6,14 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from flask import Flask
 from threading import Thread
 from dotenv import load_dotenv
 from questions import op_questions, general_questions, lean_questions, qr_questions
 from hard_questions import questions as hard_questions
 
+# Flask для Render
 app = Flask(__name__)
 
 @app.route("/")
@@ -24,6 +26,7 @@ def ping():
 
 Thread(target=lambda: app.run(host="0.0.0.0", port=8080), daemon=True).start()
 
+# Завантаження токена
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
@@ -31,7 +34,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_ID = 710633503
 
-# — Лог-файл —
+# Лог-файл
 LOG_FILE = "logs.txt"
 if not os.path.exists(LOG_FILE):
     with open(LOG_FILE, "w", encoding="utf-8") as f:
@@ -50,6 +53,7 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         msg += f"\n📊 Результат: {score}%"
     asyncio.create_task(bot.send_message(ADMIN_ID, msg))
 
+# Стан машини
 class QuizState(StatesGroup):
     question_index = State()
     selected_options = State()
@@ -62,6 +66,7 @@ class HardTestState(StatesGroup):
     current_message_id = State()
     current_options = State()
 
+# Розділи
 sections = {
     "👮ОП👮": op_questions,
     "🎭Загальні🎭": general_questions,
@@ -69,17 +74,18 @@ sections = {
     "🎲QR🎲": qr_questions
 }
 
+# Клавіатура
 def main_keyboard():
-    kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    for sec in sections:
-        kb.add(types.KeyboardButton(sec))
-    kb.add(types.KeyboardButton("💪 Hard Test"))
-    return kb
+    buttons = [[KeyboardButton(text=sec)] for sec in sections]
+    buttons.append([KeyboardButton(text="💪 Hard Test")])
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
+# /start
 @dp.message(F.text == "/start")
 async def cmd_start(msg: types.Message):
     await msg.answer("Вибери розділ:", reply_markup=main_keyboard())
 
+# Старт звичайного тесту
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(msg: types.Message, state: FSMContext):
     section = msg.text
@@ -89,6 +95,7 @@ async def start_quiz(msg: types.Message, state: FSMContext):
     await state.update_data(section=section, questions=qs, question_index=0, selected_options=[], temp_selected=set(), wrong_answers=[])
     await send_question(msg, state)
 
+# Питання звичайного тесту
 async def send_question(src, state: FSMContext):
     data = await state.get_data()
     idx = data["question_index"]
@@ -103,9 +110,8 @@ async def send_question(src, state: FSMContext):
                 correct += 1
             else:
                 wrongs.append({"question": q["text"], "options": q["options"], "selected": list(sel), "correct": list(correct_set)})
-
         pct = round(correct / len(qs) * 100)
-        log_result(src.from_user if isinstance(src, types.Message) else src.from_user, data["section"], pct)
+        log_result(src.from_user, data["section"], pct)
         grade = "❌ Погано"
         if pct >= 90: grade = "💯 Відмінно"
         elif pct >= 70: grade = "👍 Добре"
@@ -116,44 +122,37 @@ async def send_question(src, state: FSMContext):
             [InlineKeyboardButton("🔁 Пройти ще раз", callback_data="restart_quiz")],
             [InlineKeyboardButton("📋 Детально", callback_data="show_details")]
         ])
-        await (src.message if isinstance(src, CallbackQuery) else src).answer(res, reply_markup=kb, parse_mode="Markdown")
+        await src.answer(res, reply_markup=kb, parse_mode="Markdown")
         return
 
     q = qs[idx]
     opts = list(enumerate(q["options"]))
     random.shuffle(opts)
     sel = data["temp_selected"]
-    kb_buttons = [
-        [InlineKeyboardButton(("✅ " if i in sel else "◻️ ") + text, callback_data=f"opt_{i}")] for i, (text, _) in opts
-    ]
+    kb_buttons = [[InlineKeyboardButton(("✅ " if i in sel else "◻️ ") + t, callback_data=f"opt_{i}")] for i, (t, _) in opts]
     kb_buttons.append([InlineKeyboardButton("✅ Підтвердити", callback_data="confirm")])
     kb = InlineKeyboardMarkup(inline_keyboard=kb_buttons)
-    await (src.message if isinstance(src, CallbackQuery) else src).answer(q["text"], reply_markup=kb)
+    await src.answer(q["text"], reply_markup=kb)
 
 @dp.callback_query(F.data.startswith("opt_"))
 async def on_opt(callback: CallbackQuery, state: FSMContext):
     i = int(callback.data.split("_")[1])
     data = await state.get_data()
     sel = data["temp_selected"]
-    if i in sel: sel.remove(i)
-    else: sel.add(i)
+    sel.symmetric_difference_update({i})
     await state.update_data(temp_selected=sel)
-    await send_question(callback, state)
+    await send_question(callback.message, state)
 
 @dp.callback_query(F.data == "confirm")
 async def on_confirm(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    sel = data["temp_selected"]
-    so = data["selected_options"] + [list(sel)]
+    so = data["selected_options"] + [list(data["temp_selected"])]
     await state.update_data(selected_options=so, question_index=data["question_index"] + 1, temp_selected=set())
-    await send_question(callback, state)
+    await send_question(callback.message, state)
 
 @dp.callback_query(F.data == "show_details")
 async def show_details(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
-    if not data["wrong_answers"]:
-        await callback.message.answer("✅ Всі відповіді правильні!")
-        return
     for w in data["wrong_answers"]:
         text = f"❌ *{w['question']}*\n"
         for idx, (t, _) in enumerate(w["options"]):
@@ -200,10 +199,10 @@ async def send_hard_question(chat_id, state: FSMContext):
 
     q = hard_questions[idx]
     opts = list(enumerate(q["options"]))
-    await state.update_data(current_message_id=None, current_options=opts, temp_selected=set())
+    await state.update_data(current_options=opts, temp_selected=set())
     buttons = [[InlineKeyboardButton("◻️ " + t, callback_data=f"hard_opt_{i}")] for i, (t, _) in opts]
     buttons.append([InlineKeyboardButton("✅ Підтвердити", callback_data="hard_confirm")])
-    msg = await bot.send_photo(chat_id, q["image"], caption=q["text"], reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
+    msg = await bot.send_photo(chat_id, photo=q["image"], caption=q["text"], reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await state.update_data(current_message_id=msg.message_id)
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
@@ -211,7 +210,7 @@ async def hard_opt(callback: CallbackQuery, state: FSMContext):
     i = int(callback.data.split("_")[2])
     data = await state.get_data()
     sel = data["temp_selected"]
-    sel.symmetric_difference({i})
+    sel.symmetric_difference_update({i})
     await state.update_data(temp_selected=sel)
     opts = data["current_options"]
     buttons = [[InlineKeyboardButton(("✅ " if idx in sel else "◻️ ") + t, callback_data=f"hard_opt_{idx}")] for idx, (t, _) in opts]
