@@ -249,7 +249,7 @@ async def send_hard_question(chat_id, state: FSMContext):
     options = list(enumerate(question["options"]))
     await state.update_data(current_options=options, temp_selected=set())
     buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="Підтвердити", callback_data="hard_confirm")])
+    buttons.append([InlineKeyboardButton(text="✅Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     previous_id = data.get("current_message_id")
