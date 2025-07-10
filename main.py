@@ -13,7 +13,6 @@ from dotenv import load_dotenv
 from questions import op_questions, general_questions, lean_questions, qr_questions
 from hard_questions import questions as hard_questions
 
-# Flask сервер для Render
 app = Flask(__name__)
 
 @app.route("/")
@@ -26,21 +25,17 @@ def ping():
 
 Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
 
-# Завантаження токена
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# ID адміна
 ADMIN_ID = 710633503
 
-# Ініціалізація лог-файлів
 if not os.path.exists("logs.txt"):
     with open("logs.txt", "w", encoding="utf-8") as f:
         f.write("Full Name | Username | User ID | Подія | Результат\n")
 
-# Логування результатів
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
@@ -67,7 +62,36 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         text += f"\n📊 Результат: {score}%"
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
 
-# Команда перегляду всіх, хто проходив
+class QuizState(StatesGroup):
+    category = State()
+    question_index = State()
+    selected_options = State()
+    temp_selected = State()
+
+class HardTestState(StatesGroup):
+    question_index = State()
+    selected_options = State()
+    temp_selected = State()
+    current_message_id = State()
+    current_options = State()
+
+sections = {
+    "👮ОП👮": op_questions,
+    "🎭Загальні🎭": general_questions,
+    "🗿LEAN🗿": lean_questions,
+    "🎲QR🎲": qr_questions
+}
+
+def main_keyboard():
+    buttons = [types.KeyboardButton(text=section) for section in sections]
+    buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
+    buttons.append(types.KeyboardButton(text="👥 Хто проходив"))
+    return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
+
+@dp.message(F.text == "/start")
+async def cmd_start(message: types.Message):
+    await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+
 @dp.message(F.text == "/users")
 @dp.message(F.text == "👥 Хто проходив")
 async def show_users(message: types.Message):
@@ -80,7 +104,6 @@ async def show_users(message: types.Message):
         text = f.read()
         await message.answer(f"📋 Користувачі:\n\n{text}")
 
-# 🟢 Старт бота
 async def main():
     await dp.start_polling(bot)
 
