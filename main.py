@@ -13,6 +13,7 @@ from dotenv import load_dotenv
 from questions import op_questions, general_questions, lean_questions, qr_questions
 from hard_questions import questions as hard_questions
 
+# Flask сервер для Render
 app = Flask(__name__)
 
 @app.route("/")
@@ -25,18 +26,21 @@ def ping():
 
 Thread(target=lambda: app.run(host="0.0.0.0", port=8080)).start()
 
+# Завантаження токена
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
+# ID адміна
 ADMIN_ID = 710633503
 
-# Лог-файли
+# Ініціалізація лог-файлів
 if not os.path.exists("logs.txt"):
     with open("logs.txt", "w", encoding="utf-8") as f:
         f.write("Full Name | Username | User ID | Подія | Результат\n")
 
+# Логування результатів
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
@@ -63,7 +67,7 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         text += f"\n📊 Результат: {score}%"
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
 
-# Команда для перегляду всіх користувачів
+# Команда перегляду всіх, хто проходив
 @dp.message(F.text == "/users")
 @dp.message(F.text == "👥 Хто проходив")
 async def show_users(message: types.Message):
@@ -76,3 +80,9 @@ async def show_users(message: types.Message):
         text = f.read()
         await message.answer(f"📋 Користувачі:\n\n{text}")
 
+# 🟢 Старт бота
+async def main():
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())
