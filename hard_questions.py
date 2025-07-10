@@ -6,7 +6,8 @@ questions = [
             ("Холдер '-'", True),
             ("Холдер '+'", True),
             ("Резистор", False),
-            ("Світлодіод", False)
+            ("Світлодіод", True),
+            ("Всі є", False)
         ]
     },
     {
@@ -16,15 +17,16 @@ questions = [
             ("Антена", True),
             ("Кнопка", True),
             ("Світлодіод", False),
-            ("Кварцовий резонатор", True)
+            ("Кварцовий резонатор", True),
+            ("Всі є", False)
         ]
     },
     {
-        "text": "3) Яке правильне положення QR-коду на платі перед тестом DoorProtect?",
+        "text": "3) В якому випадку правильно поклеєний QR-код на платy DoorProtect??",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/3.jpg",
         "options": [
-            ("2", True),
             ("1", False),
+            ("2", True),
             ("Будь-яке", False),
             ("QR не потрібен", False)
         ]
@@ -66,7 +68,7 @@ questions = [
             ("1", True),
             ("2", True),
             ("QR не клеїться", False),
-            ("Жоден", False)
+            ("1,2 вірні", False)
         ]
     },
     {
@@ -76,7 +78,7 @@ questions = [
             ("Так", True),
             ("Ні", False),
             ("Можливо", False),
-            ("Тільки за інструкцією", False)
+            ("Якщо дозволить інспектор", False)
         ]
     },
     {
@@ -86,11 +88,11 @@ questions = [
             ("1", False),
             ("2", True),
             ("QR не клеїться", False),
-            ("Жоден", False)
+            ("Обидва варіанта вірні", False)
         ]
     },
     {
-        "text": "10) В якому випадку правильно поклеєний QR-код на плату KPC.BOT?",
+        "text": "10) В якому випадку правильно поклеєний QR-код на плату KPC-BOT?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/10.jpg",
         "options": [
             ("1", False),
@@ -106,14 +108,14 @@ questions += [
         "text": "11) В якому випадку правильно поклеєний QR-код на плату uartBridge?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/11.jpg",
         "options": [
-            ("1", False),
-            ("2", True),
+            ("1", True),
+            ("2", False),
             ("QR не клеїться", False),
-            ("Жоден", False)
+            ("Обидва варіанта вірні", False)
         ]
     },
     {
-        "text": "12) В якому випадку правильно поклеєний QR-код на плату MotionProtect Outdoor?",
+        "text": "12) В якому випадку правильно поклеєний QR-код на плату Motion Protect Outdoor?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/12.jpg",
         "options": [
             ("1", True),
@@ -129,7 +131,9 @@ questions += [
             ("Електролітичні конденсатори", True),
             ("Фототранзистор", True),
             ("Антена", False),
-            ("Світлодіод", False)
+            ("Світлодіод", False),
+            ("Холдер +", True),
+            ("Холдер -", True)
         ]
     },
     {
@@ -138,8 +142,8 @@ questions += [
         "options": [
             ("1", True),
             ("2", False),
-            ("3", False),
-            ("4", False)
+            ("Обидва варіанти вірні", False),
+            ("QR не клеїться", False)
         ]
     },
     {
@@ -149,7 +153,7 @@ questions += [
             ("Розʼєм SIM холдера", True),
             ("Клема акумуляторної батареї", True),
             ("Тампер", False),
-            ("Кварцовий резонатор", False)
+            ("Світлодіод", False)
         ]
     }
   ]
@@ -168,8 +172,8 @@ questions += [
         "text": "17) В якому випадку неправильно поклеєний QR-код на плату Relay?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/17.jpg",
         "options": [
-            ("2", True),
             ("1", False),
+            ("2", True),
             ("Обидва правильні", False),
             ("QR не клеїться", False)
         ]
@@ -189,8 +193,8 @@ questions += [
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/19.jpg",
         "options": [
             ("ЕК (дроселі із крихким керамічним корпусом)", True),
-            ("SIM холдер", False),
-            ("Клема живлення", False),
+            ("Холдер +", False),
+            ("Розєм SATA", False),
             ("Антена", False)
         ]
     }
@@ -202,8 +206,7 @@ questions += [
         "options": [
             ("Варіант 1", True),
             ("Варіант 2", False),
-            ("Будь-який варіант", False),
-            ("QR не клеїться", False)
+            ("Будь-який варіант", False)
         ]
     },
     {
@@ -222,24 +225,24 @@ questions += [
         "options": [
             ("1", True),
             ("2", False),
-            ("3", False),
+            ("QR не клеїться", False),
             ("Будь-який варіант", False)
         ]
     },
     {
-        "text": "23) Яких елементів не вистачає на платі PanicButton?",
+        "text": "23) Яких елементів не вистачає на платі Button?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/23.jpg",
         "options": [
             ("Світлодіод", True),
             ("Кнопка", False),
-            ("Антена", False),
+            ("RFM", False),
             ("Холдер батарейки", False)
         ]
     }
 ]
 questions += [
     {
-        "text": "24) В якому випадку правильно поклеєний QR-код на плату DualCurtain Outdoor?",
+        "text": "24) В якому випадку правильно поклеєний QR-код на плату Dual Curtain Outdoor?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/24.jpg",
         "options": [
             ("1", False),
@@ -263,9 +266,9 @@ questions += [
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/26.jpg",
         "options": [
             ("Холдер контактних клем", True),
-            ("Кнопка", False),
+            ("Розєм PLS", False),
             ("Світлодіод", False),
-            ("Антена", False)
+            ("Кнопки", False)
         ]
     },
     {
@@ -286,8 +289,7 @@ questions += [
         "options": [
             ("1", False),
             ("2", True),
-            ("Будь-який варіант", False),
-            ("QR не клеїться", False)
+            ("Будь-який варіант", False)  
         ]
     },
     {
@@ -296,7 +298,7 @@ questions += [
         "options": [
             ("1", True),
             ("2", False),
-            ("3", False),
+            ("Обидва варіанти правильні", False),
             ("QR не клеїться", False)
         ]
     },
@@ -314,9 +316,9 @@ questions += [
         "text": "31) В якому випадку правильно поклеєний QR-код на плату LightSwitch MBR?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/31.jpg",
         "options": [
-            ("1", True),
+            ("1", False),
             ("2", False),
-            ("QR не клеїться", False),
+            ("QR не клеїться", True),
             ("Будь-який варіант", False)
         ]
     },
@@ -324,10 +326,9 @@ questions += [
         "text": "32) Яких елементів не вистачає LightSwitch MBR?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/32.jpg",
         "options": [
-            ("1", True),
-            ("2", False),
-            ("QR не клеїться", False),
-            ("Обидва варіанти правильні", False)
+            ("Світлодіод", False),
+            ("Конектор", False),
+            ("Все є", True)
         ]
     },
     {
@@ -348,7 +349,7 @@ questions += [
         "options": [
             ("1 (Success)", False),
             ("2 (QR)", False),
-            ("3 (PWB+QR)", True),
+            ("3 (Success+QR)", True),
             ("Усі варіанти правильні", False)
         ]
     },
@@ -383,7 +384,7 @@ questions += [
         ]
     },
     {
-        "text": "38) В якому випадку правильно поклеєний QR-код на плату?",
+        "text": "38) В якому випадку правильно поклеєний QR-код на плату MP?",
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/38.jpg",
         "options": [
             ("1", False),
@@ -399,7 +400,7 @@ questions += [
         "image": "https://raw.githubusercontent.com/80casper08/Hardtest2.0/main/images/39.jpg",
         "options": [
             ("Для захисту вивідних контактів роз'єму 220V", True),
-            ("Для підключення кабелів живлення", False),
+            ("Для підключення кабелів живлення 220V", False),
             ("Для кріплення кришки корпусу", False),
             ("Для тестування плати на стенді", False)
         ]
@@ -411,7 +412,7 @@ questions += [
             ("1", False),
             ("2", True),
             ("QR не клеїться", False),
-            ("Обидва варіанти правильні", False)
+            ("Обидва варіанти неправильні", False)
         ]
     },
     {
@@ -421,7 +422,10 @@ questions += [
             ("Світлодіод", True),
             ("Клема", True),
             ("Тампер", True),
-            ("PIR-сенсор", True)
+            ("PIR-сенсор", True),
+            ("Антена", False),
+            ("Вмикач", False),
+            ("Кнопка", False)
         ]
     },
     {
@@ -430,7 +434,7 @@ questions += [
         "options": [
             ("Роз'єм SIM-holder", True),
             ("Світлодіод", True),
-            ("Антена", False),
+            ("Кварцовий резонатор", False),
             ("Тампер", False)
         ]
     },
