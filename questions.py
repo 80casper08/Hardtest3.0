@@ -1428,4 +1428,4 @@ qr_questions += [
         ]
     },
 ]
-hard_questions = []
+
