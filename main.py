@@ -38,6 +38,19 @@ if not os.path.exists("logs.txt"):
         f.write("Full Name | Username | User ID | Подія | Результат\n")
 
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
+    def save_user_if_new(user: types.User, section: str):
+    full_name = user.full_name
+    username = f"@{user.username}" if user.username else "-"
+    if not os.path.exists("users.txt"):
+        with open("users.txt", "w", encoding="utf-8") as uf:
+            uf.write("")
+    with open("users.txt", "a+", encoding="utf-8") as uf:
+        uf.seek(0)
+        existing = uf.read()
+        entry = f"{user.id} | {full_name} | {username} | {section}\n"
+        if str(user.id) not in existing:
+            uf.write(entry)
+
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
     with open("logs.txt", "a", encoding="utf-8") as f:
@@ -126,6 +139,7 @@ async def send_question(message_or_callback, state: FSMContext):
         )
 
         log_result(message_or_callback.from_user, data["category"], percent)
+        save_user_if_new(message_or_callback.from_user, data["category"])
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔁 Пройти ще раз", callback_data="restart")],
@@ -221,18 +235,8 @@ async def send_hard_question(chat_id, state: FSMContext):
         section = "👀Hard Test👀"
 
         log_result(user, section, percent)
-
         # Запис у файл users.txt
-        if not os.path.exists("users.txt"):
-            with open("users.txt", "w", encoding="utf-8") as uf:
-                uf.write("")
-        with open("users.txt", "a+", encoding="utf-8") as uf:
-            uf.seek(0)
-            existing = uf.read()
-            entry = f"{user.id} | {full_name} | {username} | {section}\n"
-            if str(user.id) not in existing:
-                uf.write(entry)
-
+        save_user_if_new(user, section)
         await bot.send_message(chat_id,
             f"📊 Результат тесту: {correct} з {len(hard_questions)}",
             reply_markup=InlineKeyboardMarkup(
