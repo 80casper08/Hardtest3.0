@@ -73,9 +73,7 @@ sections = {
 def main_keyboard():
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
-    buttons.append(types.KeyboardButton(text="👥 Хто проходив"))
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
-
 
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
