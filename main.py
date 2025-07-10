@@ -33,35 +33,44 @@ dp = Dispatcher(storage=MemoryStorage())
 ADMIN_ID = 710633503
 
 # Лог-файл
+# Лог-файл
 if not os.path.exists("logs.txt"):
     with open("logs.txt", "w", encoding="utf-8") as f:
         f.write("Full Name | Username | User ID | Подія | Результат\n")
 
-def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-    def save_user_if_new(user: types.User, section: str):
-     full_name = user.full_name
-     username = f"@{user.username}" if user.username else "-"
+# Запис користувача у users.txt без дублікатів
+def save_user_if_new(user: types.User, section: str):
+    full_name = user.full_name
+    username = f"@{user.username}" if user.username else "-"
+
     if not os.path.exists("users.txt"):
         with open("users.txt", "w", encoding="utf-8") as uf:
             uf.write("")
+
     with open("users.txt", "a+", encoding="utf-8") as uf:
         uf.seek(0)
         existing = uf.read()
         entry = f"{user.id} | {full_name} | {username} | {section}\n"
-        if str(user.id) not in existing:
+        if entry.strip() not in [line.strip() for line in existing.strip().split("\n") if line.strip()]:
             uf.write(entry)
 
+# Запис події до logs.txt + повідомлення адміну
+def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
+    
     with open("logs.txt", "a", encoding="utf-8") as f:
         if started:
             f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
         else:
             f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
+    
     text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
     if score is not None:
         text += f"\n📊 Результат: {score}%"
+    
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
+
 
 class QuizState(StatesGroup):
     category = State()
