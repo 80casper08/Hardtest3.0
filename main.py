@@ -39,8 +39,8 @@ if not os.path.exists("logs.txt"):
 
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     def save_user_if_new(user: types.User, section: str):
-    full_name = user.full_name
-    username = f"@{user.username}" if user.username else "-"
+     full_name = user.full_name
+     username = f"@{user.username}" if user.username else "-"
     if not os.path.exists("users.txt"):
         with open("users.txt", "w", encoding="utf-8") as uf:
             uf.write("")
