@@ -104,6 +104,8 @@ async def show_users(message: types.Message):
         text = f.read()
         await message.answer(f"📋 Користувачі:\n\n{text}")
 
+from full_tests import *  # ⬅️ тут імпортується повна логіка тестів з іншого модуля
+
 async def main():
     await dp.start_polling(bot)
 
