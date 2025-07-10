@@ -215,17 +215,26 @@ async def send_hard_question(chat_id, state: FSMContext):
             if correct_indices == user_selected:
                 correct += 1
         percent = round(correct / len(hard_questions) * 100)
-        log_result(await bot.get_chat(chat_id), "👀Hard Test👀", percent)
-            # Запис у файл users.txt
-    if not os.path.exists("users.txt"):
-        with open("users.txt", "w", encoding="utf-8") as uf:
-            uf.write("")
-    with open("users.txt", "a+", encoding="utf-8") as uf:
-        uf.seek(0)
-        existing = uf.read()
-        entry = f"{user.id} | {full_name} | {username} | {section}\n"
-        if str(user.id) not in existing:
-            uf.write(entry)
+
+        # отримаємо інформацію про користувача
+        user = await bot.get_chat(chat_id)
+        full_name = user.full_name
+        username = f"@{user.username}" if user.username else "-"
+        section = "👀Hard Test👀"
+
+        log_result(user, section, percent)
+
+        # Запис у файл users.txt
+        if not os.path.exists("users.txt"):
+            with open("users.txt", "w", encoding="utf-8") as uf:
+                uf.write("")
+        with open("users.txt", "a+", encoding="utf-8") as uf:
+            uf.seek(0)
+            existing = uf.read()
+            entry = f"{user.id} | {full_name} | {username} | {section}\n"
+            if str(user.id) not in existing:
+                uf.write(entry)
+
         await bot.send_message(chat_id,
             f"📊 Результат тесту: {correct} з {len(hard_questions)}",
             reply_markup=InlineKeyboardMarkup(
@@ -236,6 +245,7 @@ async def send_hard_question(chat_id, state: FSMContext):
             )
         )
         return
+
 
     question = hard_questions[index]
     options = list(enumerate(question["options"]))
