@@ -264,6 +264,16 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 # ---------- HARD TEST ----------
 @dp.message(F.text == "👀Hard Test👀")
 async def start_hard_test(message: types.Message, state: FSMContext):
+    user_id = str(message.from_user.id)
+    
+    # Перевірка блокування
+    if os.path.exists("blocked.txt"):
+        with open("blocked.txt", "r", encoding="utf-8") as f:
+            blocked_ids = f.read().splitlines()
+        if user_id in blocked_ids:
+            await message.answer("Бот тимчасово не працює")
+            return
+
     log_result(message.from_user, "👀Hard Test👀", started=True)
     await state.clear()
     await state.set_state(HardTestState.question_index)
@@ -278,6 +288,7 @@ async def start_hard_test(message: types.Message, state: FSMContext):
         questions=shuffled_questions
     )
     await send_hard_question(message.chat.id, state)
+
 
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
