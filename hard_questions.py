@@ -22,8 +22,7 @@ questions = [
         ]
     }
       ]
-    
-    questions += [
+questions += [
     {
         "text": "Яким має бути візуальний огляд плати KeypadCombi (TOP) перед тестом?",
         "options": [
