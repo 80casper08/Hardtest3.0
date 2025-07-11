@@ -284,12 +284,12 @@ if index >= len(questions):
         buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-        previous_id = data.get("current_message_id")
-        if previous_id:
-                try:
+            previous_id = data.get("current_message_id")
+    if previous_id:
+        try:
             await bot.delete_message(chat_id, previous_id)
-                except:
-                pass
+        except:
+            pass
 
         if "image" in question:
             msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
