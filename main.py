@@ -53,30 +53,43 @@ def is_blocked(user_id: int) -> bool:
     return str(user_id) in blocked_ids
 
 # ✅ Запис користувача у users.txt без дублікатів розділів
+# ✅ Запис користувача у users.txt без дублікатів розділів
 def save_user_if_new(user: types.User, section: str):
     full_name = clean_markdown(user.full_name)
     username = clean_markdown(f"@{user.username}") if user.username else "-"
-    user_id = user.id
+    user_id = str(user.id)
     entry_prefix = f"{user_id} | {full_name} | {username}"
 
-    with open("users.txt", "r", encoding="utf-8") as uf:
-        lines = uf.readlines()
+    # Створити файл, якщо не існує
+    if not os.path.exists("users.txt"):
+        with open("users.txt", "w", encoding="utf-8") as f:
+            f.write("")
 
+    # Прочитати всі рядки
+    with open("users.txt", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+
+    # Оновити або додати
     new_lines = []
     found = False
-
     for line in lines:
         if line.startswith(entry_prefix):
-            if section not in line:
-                line = line.strip() + f" | {section}\n"
             found = True
-        new_lines.append(line)
+            parts = line.strip().split(" | ")
+            existing_sections = parts[3:] if len(parts) > 3 else []
+            if section not in existing_sections:
+                existing_sections.append(section)
+            new_line = f"{entry_prefix} | {' | '.join(sorted(set(existing_sections)))}\n"
+            new_lines.append(new_line)
+        else:
+            new_lines.append(line)
 
     if not found:
         new_lines.append(f"{entry_prefix} | {section}\n")
 
-    with open("users.txt", "w", encoding="utf-8") as uf:
-        uf.writelines(new_lines)
+    with open("users.txt", "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
 
 # 📝 Запис у logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
@@ -491,11 +504,26 @@ async def info_admin(message: types.Message):
         await message.answer("Немає записів користувачів.")
         return
 
-    with open("users.txt", "r", encoding="utf-8") as f:
-        users = f.read()
+    users = {}
 
-    for i in range(0, len(users), 4000):
-        await message.answer(f"<pre>{users[i:i+4000]}</pre>", parse_mode="HTML")
+    with open("users.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split(" | ")
+            if len(parts) < 4:
+                continue
+            user_id, full_name, username, *sections = parts
+            key = f"{user_id} | {full_name} | {username}"
+            users[key] = sections
+
+    blocks = []
+    for user_key, sections in users.items():
+        line = f"{user_key} | {' | '.join(sections)}"
+        blocks.append(line)
+
+    output = "\n".join(blocks)
+    for i in range(0, len(output), 4000):
+        await message.answer(f"<pre>{output[i:i+4000]}</pre>", parse_mode="HTML")
+
 
 
 @dp.message(F.text == "📊 Статистика")
@@ -532,6 +560,7 @@ async def admin_stats(message: types.Message):
 
     for block in blocks:
         await message.answer(block, parse_mode="Markdown")
+
 
 @dp.message(F.text.startswith("/block"))
 async def block_user(message: types.Message):
