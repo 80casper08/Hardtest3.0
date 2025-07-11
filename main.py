@@ -444,6 +444,46 @@ async def show_users(message: types.Message):
 
 # <- тут кінець show_users
 
+@dp.message(F.text == "/my")
+async def my_stats(message: types.Message):
+    user_id = str(message.from_user.id)
+    full_name = message.from_user.full_name
+
+    if not os.path.exists("scores.txt"):
+        await message.answer("📭 Ви ще не проходили жодного тесту.")
+        return
+
+    user_scores = {}
+    with open("scores.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split(" | ")
+            if len(parts) != 5:
+                continue
+            uid, _, _, section, score = parts
+            if uid == user_id:
+                score = int(score)
+                if section not in user_scores:
+                    user_scores[section] = []
+                user_scores[section].append(score)
+
+    if not user_scores:
+        await message.answer("📭 Ви ще не проходили жодного тесту.")
+        return
+
+    text = f"📊 *Ваша статистика, {full_name}:*\n\n"
+    total_sum = 0
+    total_count = 0
+    for section, scores in user_scores.items():
+        avg = round(sum(scores) / len(scores))
+        count = len(scores)
+        text += f"{section}: {avg}% (📈 {count} проходжень)\n"
+        total_sum += sum(scores)
+        total_count += count
+
+    total_avg = round(total_sum / total_count) if total_count > 0 else 0
+    text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
+
+    await message.answer(text, parse_mode="Markdown")
 
 async def main():
     await dp.start_polling(bot)
