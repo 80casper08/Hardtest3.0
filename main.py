@@ -269,9 +269,8 @@ if index >= len(questions):
             )
         )
         return
-
-    questions = data["questions"]  # ← обов’язково додай цей рядок
-    question = questions[index]
+        questions = data["questions"]  # ← обов’язково додай цей рядок
+        question = questions[index]
 
     options = list(enumerate(question["options"]))
     random.shuffle(options)
