@@ -357,7 +357,17 @@ async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     else:
         for block in blocks:
             await bot.send_message(callback.message.chat.id, block, parse_mode="Markdown")
-# <- тут кінець show_users
+#@dp.message(F.text.in_(["ℹ️ Інфо", "/users"]))
+async def show_users(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    if not os.path.exists("users.txt"):
+        await message.answer("Жоден користувач ще не проходив тести.")
+        return
+    with open("users.txt", "r", encoding="utf-8") as f:
+        text = f.read()
+        await message.answer(f"📋 Користувачі:\n\n{text}")
+ <- тут кінець show_users
 
 async def main():
     await dp.start_polling(bot)
