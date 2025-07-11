@@ -229,59 +229,32 @@ async def start_hard_test(message: types.Message, state: FSMContext):
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
-
-    if index >= len(hard_questions):
-        selected_all = data.get("selected_options", [])
-        correct = 0
-        for i, q in enumerate(hard_questions):
-            correct_indices = {j for j, (_, ok) in enumerate(q["options"]) if ok}
-            user_selected = set(selected_all[i])
-            if correct_indices == user_selected:
-                correct += 1
-        percent = round(correct / len(hard_questions) * 100)
-
-        # отримаємо інформацію про користувача
-        user = await bot.get_chat(chat_id)
-        full_name = user.full_name
-        username = f"@{user.username}" if user.username else "-"
-        section = "👀Hard Test👀"
-
-        log_result(user, section, percent)
-        # Запис у файл users.txt
-        save_user_if_new(user, section)
-        await bot.send_message(chat_id,
-            f"📊 Результат тесту: {correct} з {len(hard_questions)}",
-            reply_markup=InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="hard_details")],
-                    [InlineKeyboardButton(text="🔄 Пройти ще раз", callback_data="hard_retry")]
-                ]
-            )
-        )
-        return
-
-
     question = hard_questions[index]
+
     options = list(enumerate(question["options"]))
-    random.shuffle(options)  
+    random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
-    buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="✅Підтвердити", callback_data="hard_confirm")])
+
+    buttons = [[
+        InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")
+    ] for i, (text, _) in options]
+    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-previous_id = data.get("current_message_id")
-if previous_id:
-    try:
-        await bot.delete_message(chat_id, previous_id)
-    except:
-        pass
+    previous_id = data.get("current_message_id")
+    if previous_id:
+        try:
+            await bot.delete_message(chat_id, previous_id)
+        except:
+            pass
 
-if "image" in question:
-    msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
-else:
-    msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
+    if "image" in question:
+        msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
+    else:
+        msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
 
-await state.update_data(current_message_id=msg.message_id)
+    await state.update_data(current_message_id=msg.message_id)
+
 
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
