@@ -454,6 +454,8 @@ async def my_stats(message: types.Message):
     # Запис у logs.txt, що користувач перевірив статистику
     with open("logs.txt", "a", encoding="utf-8") as f:
         f.write(f"{full_name_raw} | {username_raw} | {user_id} | Перевірив свою статистику\n")
+        await bot.send_message(ADMIN_ID, f"👁 {full_name_raw} ({username_raw}) перевірив свою статистику")
+
 
     # Для відображення в Telegram — екрануємо Markdown
     full_name = clean_markdown(full_name_raw)
@@ -496,6 +498,11 @@ async def my_stats(message: types.Message):
     await message.answer(text, parse_mode="Markdown")
 
 
+@dp.message(F.text == "ℹ️ Інфо")
+async def info_admin(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    await message.answer("ℹ️ Адмінська інформація. Тут може бути щось корисне.")
 
 
 
