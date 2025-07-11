@@ -241,7 +241,9 @@ async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
 
-    if index >= len(hard_questions):
+    questions = data.get("questions", hard_questions)
+if index >= len(questions):
+
         selected_all = data.get("selected_options", [])
         correct = 0
         for i, q in enumerate(hard_questions):
@@ -269,7 +271,8 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
         return
 
-    question = hard_questions[index]
+    question = questions[index]
+
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
