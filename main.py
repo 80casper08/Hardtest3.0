@@ -1,6 +1,11 @@
 import asyncio
 import os
 import random
+import re
+
+def clean_markdown(text):
+    return re.sub(r'([_*`\[\]()~>#+=|{}.!-])', r'\\\1', text)
+
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -39,10 +44,9 @@ if not os.path.exists("logs.txt"):
 
 # Запис користувача у users.txt без дублікатів розділів
 def save_user_if_new(user: types.User, section: str):
-    full_name = user.full_name
-    username = f"@{user.username}" if user.username else "-"
+    full_name = clean_markdown(user.full_name)
+    username = clean_markdown(f"@{user.username}") if user.username else "-"
     user_id = user.id
-
     entry_prefix = f"{user_id} | {full_name} | {username}"
 
     if not os.path.exists("users.txt"):
@@ -70,8 +74,9 @@ def save_user_if_new(user: types.User, section: str):
 
 # Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-    full_name = f"{user.full_name}"
-    username = f"@{user.username}" if user.username else "-"
+full_name = clean_markdown(user.full_name)
+username = clean_markdown(f"@{user.username}") if user.username else "-"
+
     user_id = user.id
 
     with open("logs.txt", "a", encoding="utf-8") as f:
@@ -413,7 +418,9 @@ async def show_users(message: types.Message):
         avg = round(sum(data["scores"]) / len(data["scores"]))
         count = len(data["scores"])
         users_list = "\n".join(data["users"])
-        text += f"{section}: {avg}% (📈 {count} проходжень)\n{users_list}\n\n"
+        safe_section = clean_markdown(section)
+        safe_users_list = "\n".join([clean_markdown(u) for u in data["users"]])
+        text += f"{safe_section}: {avg}% (📈 {count} проходжень)\n{safe_users_list}\n\n"
         total_sum += sum(data["scores"])
         total_count += count
 
