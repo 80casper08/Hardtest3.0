@@ -74,9 +74,8 @@ def save_user_if_new(user: types.User, section: str):
 
 # Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-   full_name = clean_markdown(user.full_name)
-   username = clean_markdown(f"@{user.username}") if user.username else "-"
-
+    full_name = clean_markdown(user.full_name)
+    username = clean_markdown(f"@{user.username}") if user.username else "-"
     user_id = user.id
 
     with open("logs.txt", "a", encoding="utf-8") as f:
@@ -94,6 +93,7 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         text += f"\n📊 Результат: {score}%"
 
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
+
 
 class QuizState(StatesGroup):
     category = State()
@@ -238,8 +238,20 @@ async def show_details(callback: CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data == "restart")
 async def restart_quiz(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    category = data.get("category")
+    questions = sections.get(category)
+
+    if not questions:
+        await callback.message.answer("⚠️ Виникла помилка, спробуйте /start")
+        return
+
     await state.clear()
-    await callback.message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+    await state.set_state(QuizState.category)
+    await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
+
+    await send_question(callback, state)
+
 
 # ---------- HARD TEST ----------
 @dp.message(F.text == "👀Hard Test👀")
