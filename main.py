@@ -276,9 +276,9 @@ async def send_hard_question(chat_id, state: FSMContext):
         except:
             pass
     if "image" in question:
-    msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
+     msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
 else:
-    msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
+     msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
 
 await state.update_data(current_message_id=msg.message_id)
 @dp.callback_query(F.data.startswith("hard_opt_"))
