@@ -830,7 +830,7 @@ questions += [
             ("Шлейф 3 пін", False),
             ("Шлейф 8 пін", False),
             ("Кабель USB Type-C", False),
-            ("Хед", False
+            ("Хед", False)
         ]
     }
 ]
