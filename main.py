@@ -235,7 +235,6 @@ async def start_hard_test(message: types.Message, state: FSMContext):
         questions=shuffled_questions
     )
     await send_hard_question(message.chat.id, state)
-)
 
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
