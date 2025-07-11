@@ -402,47 +402,6 @@ async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     else:
         for block in blocks:
             await bot.send_message(callback.message.chat.id, block, parse_mode="Markdown")
-@dp.message(F.text.in_(["📊 Статистика", "ℹ️ Інфо", "/users"]))
-async def show_users(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
-        return
-
-    if not os.path.exists("scores.txt"):
-        await message.answer("Ще немає результатів для підрахунку статистики.")
-        return
-
-    from collections import defaultdict
-
-    user_data = defaultdict(lambda: defaultdict(list))  # user_id -> section -> [scores]
-    user_info = {}  # user_id -> (full_name, username)
-
-    with open("scores.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            parts = line.strip().split(" | ")
-            if len(parts) != 5:
-                continue
-            user_id, full_name, username, section, score = parts
-            score = int(score)
-            user_data[user_id][section].append(score)
-            user_info[user_id] = (full_name, username)
-
-    for user_id, sections in user_data.items():
-        full_name, username = user_info[user_id]
-        total_sum = 0
-        total_count = 0
-        text = f"📄 *{full_name}* ({username} | ID: {user_id})\n\n"
-
-        for section, scores in sections.items():
-            avg = round(sum(scores) / len(scores), 1)
-            total_sum += sum(scores)
-            total_count += len(scores)
-            text += f"{section}: {len(scores)} проходжень — середній результат: {avg}%\n"
-
-        overall_avg = round(total_sum / total_count, 1) if total_count > 0 else 0
-        text += f"\n📊 *Загальний середній результат:* {overall_avg}%"
-        await message.answer(text, parse_mode="Markdown")
-
-
 
 # <- тут кінець show_users
 @dp.message(F.text == "/my")
