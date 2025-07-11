@@ -37,22 +37,6 @@ if not os.path.exists("logs.txt"):
     with open("logs.txt", "w", encoding="utf-8") as f:
         f.write("Full Name | Username | User ID | Подія | Результат\n")
 
-# Запис користувача у users.txt без дублікатів
-def save_user_if_new(user: types.User, section: str):
-    full_name = user.full_name
-    username = f"@{user.username}" if user.username else "-"
-
-    if not os.path.exists("users.txt"):
-        with open("users.txt", "w", encoding="utf-8") as uf:
-            uf.write("")
-
-    with open("users.txt", "a+", encoding="utf-8") as uf:
-        uf.seek(0)
-        existing = uf.read()
-        entry = f"{user.id} | {full_name} | {username} | {section}\n"
-        if entry.strip() not in [line.strip() for line in existing.strip().split("\n") if line.strip()]:
-            uf.write(entry)
-
 # Запис користувача у users.txt без дублікатів розділів
 def save_user_if_new(user: types.User, section: str):
     full_name = user.full_name
