@@ -74,8 +74,8 @@ def save_user_if_new(user: types.User, section: str):
 
 # Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-    full_name = clean_markdown(user.full_name)
-    username = clean_markdown(f"@{user.username}") if user.username else "-"
+    full_name = (user.full_name)
+    username = f"@{user.username}" if user.username else "-"
     user_id = user.id
 
     with open("logs.txt", "a", encoding="utf-8") as f:
@@ -443,16 +443,21 @@ async def show_users(message: types.Message):
 
 
 # <- тут кінець show_users
-
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
     user_id = str(message.from_user.id)
-    full_name = clean_markdown(message.from_user.full_name)
-    username = clean_markdown(f"@{message.from_user.username}") if message.from_user.username else "-"
+
+    # Для логів — НЕ екрануємо
+    full_name_raw = message.from_user.full_name
+    username_raw = f"@{message.from_user.username}" if message.from_user.username else "-"
 
     # Запис у logs.txt, що користувач перевірив статистику
     with open("logs.txt", "a", encoding="utf-8") as f:
-        f.write(f"{full_name} | {username} | {user_id} | Перевірив свою статистику\n")
+        f.write(f"{full_name_raw} | {username_raw} | {user_id} | Перевірив свою статистику\n")
+
+    # Для відображення в Telegram — екрануємо Markdown
+    full_name = clean_markdown(full_name_raw)
+    username = clean_markdown(username_raw)
 
     if not os.path.exists("scores.txt"):
         await message.answer("📭 Ви ще не проходили жодного тесту.")
@@ -489,6 +494,9 @@ async def my_stats(message: types.Message):
     text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
 
     await message.answer(text, parse_mode="Markdown")
+
+
+
 
 
 async def main():
