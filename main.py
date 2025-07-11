@@ -66,7 +66,7 @@ def save_user_if_new(user: types.User, section: str):
         new_lines.append(f"{entry_prefix} | {section}\n")
 
     with open("users.txt", "w", encoding="utf-8") as uf:
-    uf.writelines(new_lines)
+        uf.writelines(new_lines)
 
 # Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
