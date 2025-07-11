@@ -79,15 +79,15 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         else:
             f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
 
+    if not started and score is not None:
+        with open("scores.txt", "a", encoding="utf-8") as s:
+            s.write(f"{user.id} | {section} | {score}\n")
+
     text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
     if score is not None:
         text += f"\n📊 Результат: {score}%"
 
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
-
-
-
-
 class QuizState(StatesGroup):
     category = State()
     question_index = State()
@@ -381,16 +381,45 @@ async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     else:
         for block in blocks:
             await bot.send_message(callback.message.chat.id, block, parse_mode="Markdown")
-@dp.message(F.text.in_(["ℹ️ Інфо", "/users"]))
+@dp.message(F.text.in_(["📊 Статистика", "ℹ️ Інфо", "/users"]))
 async def show_users(message: types.Message):
     if str(message.from_user.id) != str(ADMIN_ID):
         return
-    if not os.path.exists("users.txt"):
-        await message.answer("Жоден користувач ще не проходив тести.")
+
+    if not os.path.exists("scores.txt"):
+        await message.answer("Ще немає результатів для підрахунку статистики.")
         return
-    with open("users.txt", "r", encoding="utf-8") as f:
-        text = f.read()
-        await message.answer(f"📋 Користувачі:\n\n{text}")
+
+    sections_stats = {}
+    with open("scores.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split(" | ")
+            if len(parts) != 3:
+                continue
+            user_id, section, score = parts
+            score = int(score)
+            if section not in sections_stats:
+                sections_stats[section] = []
+            sections_stats[section].append(score)
+
+    total_sum = 0
+    total_count = 0
+    text = "📊 *Середні результати по розділах:*\n\n"
+
+    for section, scores in sections_stats.items():
+        avg = round(sum(scores) / len(scores))
+        text += f"{section}: {avg}% (📈 {len(scores)} проходжень)\n"
+        total_sum += sum(scores)
+        total_count += len(scores)
+
+    if total_count > 0:
+        total_avg = round(total_sum / total_count)
+        text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
+    else:
+        text += "\nНемає даних для підрахунку загального результату."
+
+    await message.answer(text, parse_mode="Markdown")
+
 # <- тут кінець show_users
 
 
