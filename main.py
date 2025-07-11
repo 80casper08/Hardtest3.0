@@ -268,12 +268,14 @@ if index >= len(questions):
                 ]
             )
         )
-        return
-        questions = data["questions"]  # ← обов’язково додай цей рядок
-        question = questions[index]
+    return
+
+    questions = data["questions"]
+    question = questions[index]
 
     options = list(enumerate(question["options"]))
     random.shuffle(options)
+
 
     await state.update_data(current_options=options, temp_selected=set())
 
