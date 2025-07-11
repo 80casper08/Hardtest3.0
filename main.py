@@ -66,7 +66,25 @@ def save_user_if_new(user: types.User, section: str):
         new_lines.append(f"{entry_prefix} | {section}\n")
 
     with open("users.txt", "w", encoding="utf-8") as uf:
-        uf.writelines(new_lines)
+    uf.writelines(new_lines)
+
+# Запис події до logs.txt + повідомлення адміну
+def log_result(user: types.User, section: str, score: int = None, started: bool = False):
+    full_name = f"{user.full_name}"
+    username = f"@{user.username}" if user.username else "-"
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        if started:
+            f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
+        else:
+            f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
+
+    text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
+    if score is not None:
+        text += f"\n📊 Результат: {score}%"
+
+    asyncio.create_task(bot.send_message(ADMIN_ID, text))
+
 
 
 
