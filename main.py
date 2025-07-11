@@ -72,22 +72,24 @@ def save_user_if_new(user: types.User, section: str):
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
+    user_id = user.id
 
     with open("logs.txt", "a", encoding="utf-8") as f:
         if started:
-            f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
+            f.write(f"{full_name} | {username} | {user_id} | Розпочав: {section}\n")
         else:
-            f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
+            f.write(f"{full_name} | {username} | {user_id} | Завершив: {section} | {score}%\n")
 
     if not started and score is not None:
         with open("scores.txt", "a", encoding="utf-8") as s:
-            s.write(f"{user.id} | {section} | {score}\n")
+            s.write(f"{user_id} | {full_name} | {username} | {section} | {score}\n")
 
     text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
     if score is not None:
         text += f"\n📊 Результат: {score}%"
 
     asyncio.create_task(bot.send_message(ADMIN_ID, text))
+
 class QuizState(StatesGroup):
     category = State()
     question_index = State()
@@ -394,31 +396,35 @@ async def show_users(message: types.Message):
     with open("scores.txt", "r", encoding="utf-8") as f:
         for line in f:
             parts = line.strip().split(" | ")
-            if len(parts) != 3:
+            if len(parts) != 5:
                 continue
-            user_id, section, score = parts
+            user_id, full_name, username, section, score = parts
             score = int(score)
             if section not in sections_stats:
-                sections_stats[section] = []
-            sections_stats[section].append(score)
+                sections_stats[section] = {"scores": [], "users": []}
+            sections_stats[section]["scores"].append(score)
+            sections_stats[section]["users"].append(f"{user_id} | {full_name} | {username} | {score}%")
 
     total_sum = 0
     total_count = 0
     text = "📊 *Середні результати по розділах:*\n\n"
 
-    for section, scores in sections_stats.items():
-        avg = round(sum(scores) / len(scores))
-        text += f"{section}: {avg}% (📈 {len(scores)} проходжень)\n"
-        total_sum += sum(scores)
-        total_count += len(scores)
+    for section, data in sections_stats.items():
+        avg = round(sum(data["scores"]) / len(data["scores"]))
+        count = len(data["scores"])
+        users_list = "\n".join(data["users"])
+        text += f"{section}: {avg}% (📈 {count} проходжень)\n{users_list}\n\n"
+        total_sum += sum(data["scores"])
+        total_count += count
 
     if total_count > 0:
         total_avg = round(total_sum / total_count)
-        text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
+        text += f"🏁 *Загальний середній результат:* {total_avg}%"
     else:
-        text += "\nНемає даних для підрахунку загального результату."
+        text += "Немає даних для підрахунку загального результату."
 
     await message.answer(text, parse_mode="Markdown")
+
 
 # <- тут кінець show_users
 
