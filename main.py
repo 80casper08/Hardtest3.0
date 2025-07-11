@@ -284,19 +284,19 @@ if index >= len(questions):
         buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
         keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-            previous_id = data.get("current_message_id")
-    if previous_id:
-        try:
-            await bot.delete_message(chat_id, previous_id)
-        except:
-            pass
+        previous_id = data.get("current_message_id")
+        if previous_id:
+            try:
+                await bot.delete_message(chat_id, previous_id)
+            except:
+                pass
 
-        if "image" in question:
-            msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
-        else:
-            msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
+            if "image" in question:
+                msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
+            else:
+                msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
 
-        await state.update_data(current_message_id=msg.message_id)
+            await state.update_data(current_message_id=msg.message_id)
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
     index = int(callback.data.split("_")[2])
