@@ -344,14 +344,21 @@ async def restart_hard_quiz(callback: CallbackQuery, state: FSMContext):
 async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     selected_all = data.get("selected_options", [])
+    questions = data.get("questions", hard_questions)  # 🔧 використовуємо поточні (перемішані) питання
     blocks = []
-    for i, q in enumerate(hard_questions):
+
+    for i, q in enumerate(questions):
         correct = {j for j, (_, ok) in enumerate(q["options"]) if ok}
         user = set(selected_all[i])
         if correct != user:
             user_ans = [q["options"][j][0] for j in user]
             correct_ans = [q["options"][j][0] for j in correct]
-            blocks.append(f"❓ *{q['text']}*\n🔴 Ти вибрав: {', '.join(user_ans) if user_ans else 'нічого'}\n✅ Правильно: {', '.join(correct_ans)}")
+            blocks.append(
+                f"❓ *{q['text']}*\n"
+                f"🔴 Ти вибрав: {', '.join(user_ans) if user_ans else 'нічого'}\n"
+                f"✅ Правильно: {', '.join(correct_ans)}"
+            )
+
     if not blocks:
         await bot.send_message(callback.message.chat.id, "🥳 Всі відповіді правильні!")
     else:
