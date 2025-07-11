@@ -53,22 +53,37 @@ def save_user_if_new(user: types.User, section: str):
         if entry.strip() not in [line.strip() for line in existing.strip().split("\n") if line.strip()]:
             uf.write(entry)
 
-# Запис події до logs.txt + повідомлення адміну
-def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-    full_name = f"{user.full_name}"
+# Запис користувача у users.txt без дублікатів розділів
+def save_user_if_new(user: types.User, section: str):
+    full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
-    
-    with open("logs.txt", "a", encoding="utf-8") as f:
-        if started:
-            f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
-        else:
-            f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
-    
-    text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
-    if score is not None:
-        text += f"\n📊 Результат: {score}%"
-    
-    asyncio.create_task(bot.send_message(ADMIN_ID, text))
+    user_id = user.id
+
+    entry_prefix = f"{user_id} | {full_name} | {username}"
+
+    if not os.path.exists("users.txt"):
+        with open("users.txt", "w", encoding="utf-8") as uf:
+            uf.write("")
+
+    with open("users.txt", "r", encoding="utf-8") as uf:
+        lines = uf.readlines()
+
+    new_lines = []
+    found = False
+
+    for line in lines:
+        if line.startswith(entry_prefix):
+            if section not in line:
+                line = line.strip() + f" | {section}\n"
+            found = True
+        new_lines.append(line)
+
+    if not found:
+        new_lines.append(f"{entry_prefix} | {section}\n")
+
+    with open("users.txt", "w", encoding="utf-8") as uf:
+        uf.writelines(new_lines)
+
 
 
 class QuizState(StatesGroup):
