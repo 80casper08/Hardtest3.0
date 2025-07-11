@@ -120,7 +120,9 @@ def main_keyboard(user_id=None):
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
     if str(user_id) == str(ADMIN_ID):
         buttons.append(types.KeyboardButton(text="ℹ️ Інфо"))
+        buttons.append(types.KeyboardButton(text="📊 Статистика"))  # НОВА
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
+
 
 
 @dp.message(F.text == "/start")
@@ -502,8 +504,52 @@ async def my_stats(message: types.Message):
 async def info_admin(message: types.Message):
     if str(message.from_user.id) != str(ADMIN_ID):
         return
-    await message.answer("ℹ️ Адмінська інформація. Тут може бути щось корисне.")
 
+    if not os.path.exists("users.txt"):
+        await message.answer("Немає записів користувачів.")
+        return
+
+    with open("users.txt", "r", encoding="utf-8") as f:
+        users = f.read()
+
+    for i in range(0, len(users), 4000):
+        await message.answer(f"<pre>{users[i:i+4000]}</pre>", parse_mode="HTML")
+
+
+@dp.message(F.text == "📊 Статистика")
+async def admin_stats(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+
+    if not os.path.exists("scores.txt"):
+        await message.answer("Ще немає результатів.")
+        return
+
+    from collections import defaultdict
+    user_data = defaultdict(lambda: defaultdict(list))
+    user_info = {}
+
+    with open("scores.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split(" | ")
+            if len(parts) != 5:
+                continue
+            user_id, full_name, username, section, score = parts
+            score = int(score)
+            user_data[user_id][section].append(score)
+            user_info[user_id] = (full_name, username)
+
+    blocks = []
+    for user_id, sections in user_data.items():
+        full_name, username = user_info[user_id]
+        block = f"📄 *{full_name}* ({username})\n"
+        for section, scores in sections.items():
+            avg = round(sum(scores) / len(scores), 1)
+            block += f"{section}: {len(scores)} проходжень, середній: {avg}%\n"
+        blocks.append(block)
+
+    for block in blocks:
+        await message.answer(block, parse_mode="Markdown")
 
 
 async def main():
