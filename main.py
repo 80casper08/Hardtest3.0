@@ -344,7 +344,7 @@ async def restart_hard_quiz(callback: CallbackQuery, state: FSMContext):
 async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     selected_all = data.get("selected_options", [])
-    questions = data.get("questions", hard_questions)  # 🔧 використовуємо поточні (перемішані) питання
+    questions = data.get("questions", hard_questions)  # ✅ використовуємо перемішані питання
     blocks = []
 
     for i, q in enumerate(questions):
