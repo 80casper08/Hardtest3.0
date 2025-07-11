@@ -74,8 +74,8 @@ def save_user_if_new(user: types.User, section: str):
 
 # Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-full_name = clean_markdown(user.full_name)
-username = clean_markdown(f"@{user.username}") if user.username else "-"
+   full_name = clean_markdown(user.full_name)
+   username = clean_markdown(f"@{user.username}") if user.username else "-"
 
     user_id = user.id
 
