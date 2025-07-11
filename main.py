@@ -223,8 +223,19 @@ async def start_hard_test(message: types.Message, state: FSMContext):
     log_result(message.from_user, "👀Hard Test👀", started=True)
     await state.clear()
     await state.set_state(HardTestState.question_index)
-    await state.update_data(question_index=0, selected_options=[], temp_selected=set())
+
+    # 🎲 Перемішуємо всі питання
+    shuffled_questions = hard_questions.copy()
+    random.shuffle(shuffled_questions)
+
+    await state.update_data(
+        question_index=0,
+        selected_options=[],
+        temp_selected=set(),
+        questions=shuffled_questions
+    )
     await send_hard_question(message.chat.id, state)
+)
 
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
