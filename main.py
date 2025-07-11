@@ -138,12 +138,18 @@ async def cmd_start(message: types.Message):
 
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
+    user_id = str(message.from_user.id)
+    if is_blocked(user_id):
+        await message.answer("Бот тимчасово не працює")
+        return
+
     category = message.text
     questions = sections[category]
     log_result(message.from_user, category, started=True)
     await state.set_state(QuizState.category)
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
     await send_question(message, state)
+
 
 async def send_question(message_or_callback, state: FSMContext):
     data = await state.get_data()
