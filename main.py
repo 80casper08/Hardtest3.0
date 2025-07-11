@@ -241,26 +241,24 @@ async def send_hard_question(chat_id, state: FSMContext):
     index = data["question_index"]
 
     questions = data.get("questions", hard_questions)
-if index >= len(questions):
 
+    if index >= len(questions):
         selected_all = data.get("selected_options", [])
         correct = 0
-        for i, q in enumerate(hard_questions):
+        for i, q in enumerate(questions):  # використай вже перемішаний список
             correct_indices = {j for j, (_, ok) in enumerate(q["options"]) if ok}
             user_selected = set(selected_all[i])
             if correct_indices == user_selected:
                 correct += 1
-        percent = round(correct / len(hard_questions) * 100)
+        percent = round(correct / len(questions) * 100)
 
         user = await bot.get_chat(chat_id)
-        full_name = user.full_name
-        username = f"@{user.username}" if user.username else "-"
-        section = "👀Hard Test👀"
-        log_result(user, section, percent)
-        save_user_if_new(user, section)
+        log_result(user, "👀Hard Test👀", percent)
+        save_user_if_new(user, "👀Hard Test👀")
 
-        await bot.send_message(chat_id,
-            f"📊 Результат тесту: {correct} з {len(hard_questions)}",
+        await bot.send_message(
+            chat_id,
+            f"📊 Результат тесту: {correct} з {len(questions)}",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="hard_details")],
@@ -269,55 +267,32 @@ if index >= len(questions):
             )
         )
         return
-        
-        questions = data["questions"]
-        question = questions[index]
-        
-        options = list(enumerate(question["options"]))
-        random.shuffle(options)
 
+    # Показ питання
+    question = questions[index]
+    options = list(enumerate(question["options"]))
+    random.shuffle(options)
+    await state.update_data(current_options=options, temp_selected=set())
 
-        await state.update_data(current_options=options, temp_selected=set())
-
-        buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")]
+    buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")]
                for i, (text, _) in options]
-        buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
-        keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-
-        previous_id = data.get("current_message_id")
-        if previous_id:
-            try:
-                await bot.delete_message(chat_id, previous_id)
-            except:
-                pass
-
-            if "image" in question:
-                msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
-            else:
-                msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
-
-            await state.update_data(current_message_id=msg.message_id)
-@dp.callback_query(F.data.startswith("hard_opt_"))
-async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
-    index = int(callback.data.split("_")[2])
-    data = await state.get_data()
-    selected = data.get("temp_selected", set())
-    selected.symmetric_difference_update({index})
-    await state.update_data(temp_selected=selected)
-
-    options = data["current_options"]
-    buttons = [[
-        InlineKeyboardButton(
-            text=("✅ " if i in selected else "◻️ ") + text,
-            callback_data=f"hard_opt_{i}"
-        )
-    ] for i, (text, _) in options]
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
-    await bot.edit_message_reply_markup(
-        chat_id=callback.message.chat.id,
-        message_id=data["current_message_id"],
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons)
-    )
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    previous_id = data.get("current_message_id")
+    if previous_id:
+        try:
+            await bot.delete_message(chat_id, previous_id)
+        except:
+            pass
+
+    if "image" in question:
+        msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
+    else:
+        msg = await bot.send_message(chat_id, text=question["text"], reply_markup=keyboard)
+
+    await state.update_data(current_message_id=msg.message_id)
+
 @dp.callback_query(F.data == "hard_confirm")
 async def confirm_hard_answer(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
