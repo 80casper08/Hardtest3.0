@@ -447,6 +447,11 @@ async def show_users(message: types.Message):
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
     user_id = str(message.from_user.id)
+    
+    with open("logs.txt", "a", encoding="utf-8") as f:
+    username = f"@{message.from_user.username}" if message.from_user.username else "-"
+    f.write(f"{message.from_user.full_name} | {username} | {user_id} | Перевірив свою статистику\n")
+
     full_name = message.from_user.full_name
 
     if not os.path.exists("scores.txt"):
