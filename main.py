@@ -409,7 +409,11 @@ async def show_users(message: types.Message):
         await message.answer("Ще немає результатів для підрахунку статистики.")
         return
 
-    sections_stats = {}
+    from collections import defaultdict
+
+    user_data = defaultdict(lambda: defaultdict(list))  # user_id -> section -> [scores]
+    user_info = {}  # user_id -> (full_name, username)
+
     with open("scores.txt", "r", encoding="utf-8") as f:
         for line in f:
             parts = line.strip().split(" | ")
@@ -417,32 +421,25 @@ async def show_users(message: types.Message):
                 continue
             user_id, full_name, username, section, score = parts
             score = int(score)
-            if section not in sections_stats:
-                sections_stats[section] = {"scores": [], "users": []}
-            sections_stats[section]["scores"].append(score)
-            sections_stats[section]["users"].append(f"{user_id} | {full_name} | {username} | {score}%")
+            user_data[user_id][section].append(score)
+            user_info[user_id] = (full_name, username)
 
-    total_sum = 0
-    total_count = 0
-    text = "📊 *Середні результати по розділах:*\n\n"
+    for user_id, sections in user_data.items():
+        full_name, username = user_info[user_id]
+        total_sum = 0
+        total_count = 0
+        text = f"📄 *{full_name}* ({username} | ID: {user_id})\n\n"
 
-    for section, data in sections_stats.items():
-        avg = round(sum(data["scores"]) / len(data["scores"]))
-        count = len(data["scores"])
-        users_list = "\n".join(data["users"])
-        safe_section = clean_markdown(section)
-        safe_users_list = "\n".join([clean_markdown(u) for u in data["users"]])
-        text += f"{safe_section}: {avg}% (📈 {count} проходжень)\n{safe_users_list}\n\n"
-        total_sum += sum(data["scores"])
-        total_count += count
+        for section, scores in sections.items():
+            avg = round(sum(scores) / len(scores), 1)
+            total_sum += sum(scores)
+            total_count += len(scores)
+            text += f"{section}: {len(scores)} проходжень — середній результат: {avg}%\n"
 
-    if total_count > 0:
-        total_avg = round(total_sum / total_count)
-        text += f"🏁 *Загальний середній результат:* {total_avg}%"
-    else:
-        text += "Немає даних для підрахунку загального результату."
+        overall_avg = round(total_sum / total_count, 1) if total_count > 0 else 0
+        text += f"\n📊 *Загальний середній результат:* {overall_avg}%"
+        await message.answer(text, parse_mode="Markdown")
 
-    await message.answer(text, parse_mode="Markdown")
 
 
 # <- тут кінець show_users
