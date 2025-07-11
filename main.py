@@ -36,22 +36,28 @@ dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_ID = 710633503
 
-# Лог-файл
-# Лог-файл
-if not os.path.exists("logs.txt"):
-    with open("logs.txt", "w", encoding="utf-8") as f:
-        f.write("Full Name | Username | User ID | Подія | Результат\n")
+# Створення потрібних файлів, якщо їх ще не існує
+for filename, initial in [
+    ("logs.txt", "Full Name | Username | User ID | Подія | Результат\n"),
+    ("blocked.txt", ""),
+    ("users.txt", "")
+]:
+    if not os.path.exists(filename):
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(initial)
 
-# Запис користувача у users.txt без дублікатів розділів
+# 🔒 Перевірка на блокування
+def is_blocked(user_id: int) -> bool:
+    with open("blocked.txt", "r", encoding="utf-8") as f:
+        blocked_ids = f.read().splitlines()
+    return str(user_id) in blocked_ids
+
+# ✅ Запис користувача у users.txt без дублікатів розділів
 def save_user_if_new(user: types.User, section: str):
     full_name = clean_markdown(user.full_name)
     username = clean_markdown(f"@{user.username}") if user.username else "-"
     user_id = user.id
     entry_prefix = f"{user_id} | {full_name} | {username}"
-
-    if not os.path.exists("users.txt"):
-        with open("users.txt", "w", encoding="utf-8") as uf:
-            uf.write("")
 
     with open("users.txt", "r", encoding="utf-8") as uf:
         lines = uf.readlines()
@@ -72,9 +78,9 @@ def save_user_if_new(user: types.User, section: str):
     with open("users.txt", "w", encoding="utf-8") as uf:
         uf.writelines(new_lines)
 
-# Запис події до logs.txt + повідомлення адміну
+# 📝 Запис у logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
-    full_name = (user.full_name)
+    full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
     user_id = user.id
 
@@ -510,6 +516,33 @@ async def admin_stats(message: types.Message):
     for block in blocks:
         await message.answer(block, parse_mode="Markdown")
 
+@dp.message(F.text.startswith("/block"))
+async def block_user(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    args = message.text.split()
+    if len(args) != 2:
+        await message.answer("❗ Використання: /block USER_ID")
+        return
+    user_id = args[1]
+    with open("blocked.txt", "a", encoding="utf-8") as f:
+        f.write(user_id + "\n")
+    await message.answer(f"⛔ Користувач {user_id} заблокований.")
+
+@dp.message(F.text.startswith("/unblock"))
+async def unblock_user(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    args = message.text.split()
+    if len(args) != 2:
+        await message.answer("❗ Використання: /unblock USER_ID")
+        return
+    user_id = args[1]
+    with open("blocked.txt", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    with open("blocked.txt", "w", encoding="utf-8") as f:
+        f.writelines([line for line in lines if line.strip() != user_id])
+    await message.answer(f"✅ Користувач {user_id} розблокований.")
 
 async def main():
     await dp.start_polling(bot)
