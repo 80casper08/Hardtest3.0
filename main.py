@@ -349,16 +349,18 @@ async def send_hard_question(chat_id, state: FSMContext):
         log_result(user, "👀Hard Test👀", percent)
         save_user_if_new(user, "👀Hard Test👀")
 
-        await bot.send_message(
+       await bot.send_message(
             chat_id,
-            f"📊 Результат тесту: {correct} з {len(questions)}",
+            text=clean_markdown(f"📊 Результат тесту: {correct} з {len(questions)}"),
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="hard_details")],
                     [InlineKeyboardButton(text="🔄 Пройти ще раз", callback_data="hard_retry")]
-                ]
-            )
-        )
+        ]
+    ),
+    parse_mode="MarkdownV2"
+)
+
         return
 
     question = questions[index]
