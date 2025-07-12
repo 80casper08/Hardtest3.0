@@ -31,11 +31,12 @@ dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_ID = 710633503
 
-# Лог-файл
-# Лог-файл
-if not os.path.exists("logs.txt"):
-    with open("logs.txt", "w", encoding="utf-8") as f:
-        f.write("Full Name | Username | User ID | Подія | Результат\n")
+def is_blocked(user_id: int) -> bool:
+    if not os.path.exists("blocked.txt"):
+        return False
+    with open("blocked.txt", "r", encoding="utf-8") as f:
+        return str(user_id) in f.read().splitlines()
+
 
 # Запис користувача у users.txt без дублікатів
 def save_user_if_new(user: types.User, section: str):
@@ -106,8 +107,14 @@ async def cmd_start(message: types.Message):
 
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    if is_blocked(user_id):
+        await message.answer("Бот тимчасово непрацює")
+        return
+
     category = message.text
-    questions = sections[category][:20]
+
+    questions = sections[category]
     log_result(message.from_user, category, started=True)
     await state.set_state(QuizState.category)
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
@@ -214,43 +221,72 @@ async def show_details(callback: CallbackQuery, state: FSMContext):
 
 @dp.callback_query(F.data == "restart")
 async def restart_quiz(callback: CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    category = data.get("category")
+
+    if not category or category not in sections:
+        await state.clear()
+        await callback.message.answer("⚠️ Виникла помилка. Оберіть розділ заново:", reply_markup=main_keyboard())
+        return
+
+    questions = sections[category]  # або [:] якщо хочеш всі питання
     await state.clear()
-    await callback.message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+    await state.set_state(QuizState.category)
+    await state.update_data(
+        category=category,
+        question_index=0,
+        selected_options=[],
+        wrong_answers=[],
+        questions=questions
+    )
+    await send_question(callback, state)
+
 
 # ---------- HARD TEST ----------
 @dp.message(F.text == "👀Hard Test👀")
 async def start_hard_test(message: types.Message, state: FSMContext):
+    user_id = message.from_user.id
+    if is_blocked(user_id):
+        await message.answer("Бот тимчасово непрацює")
+        return
+
     log_result(message.from_user, "👀Hard Test👀", started=True)
     await state.clear()
     await state.set_state(HardTestState.question_index)
-    await state.update_data(question_index=0, selected_options=[], temp_selected=set())
+
+    shuffled_questions = hard_questions.copy()
+    random.shuffle(shuffled_questions)
+
+    await state.update_data(
+        question_index=0,
+        selected_options=[],
+        temp_selected=set(),
+        questions=shuffled_questions
+    )
     await send_hard_question(message.chat.id, state)
+
 
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
-
-    if index >= len(hard_questions):
+    questions = data["questions"]
+    if index >= len(questions):
         selected_all = data.get("selected_options", [])
         correct = 0
-        for i, q in enumerate(hard_questions):
+        for i, q in enumerate(questions):
             correct_indices = {j for j, (_, ok) in enumerate(q["options"]) if ok}
             user_selected = set(selected_all[i])
             if correct_indices == user_selected:
                 correct += 1
-        percent = round(correct / len(hard_questions) * 100)
+        percent = round(correct / len(questions) * 100)
 
-        # отримаємо інформацію про користувача
         user = await bot.get_chat(chat_id)
-        full_name = user.full_name
-        username = f"@{user.username}" if user.username else "-"
-        section = "👀Hard Test👀"
+        log_result(user, "👀Hard Test👀", percent)
+        save_user_if_new(user, "👀Hard Test👀")
 
-        log_result(user, section, percent)
-        # Запис у файл users.txt
-        save_user_if_new(user, section)
-        await bot.send_message(chat_id,
-            f"📊 Результат тесту: {correct} з {len(hard_questions)}",
+        await bot.send_message(
+            chat_id,
+            text=f"📊 Результат тесту: {correct} з {len(questions)}",
             reply_markup=InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="hard_details")],
@@ -260,13 +296,18 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
         return
 
-
-    question = hard_questions[index]
+    question = questions[index]
     options = list(enumerate(question["options"]))
-    random.shuffle(options)  
+    random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
-    buttons = [[InlineKeyboardButton(text="◻️ " + text, callback_data=f"hard_opt_{i}")] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="✅Підтвердити", callback_data="hard_confirm")])
+
+    buttons = [[
+        InlineKeyboardButton(
+            text="◻️ " + opt_text,
+            callback_data=f"hard_opt_{i}"
+        )
+    ] for i, (opt_text, _) in options]
+    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     previous_id = data.get("current_message_id")
@@ -275,8 +316,24 @@ async def send_hard_question(chat_id, state: FSMContext):
             await bot.delete_message(chat_id, previous_id)
         except:
             pass
-    msg = await bot.send_photo(chat_id, photo=question["image"], caption=question["text"], reply_markup=keyboard)
+
+    # 👇 тут головне — перевіряємо наявність фото
+    if "image" in question and question["image"]:
+        msg = await bot.send_photo(
+            chat_id,
+            photo=question["image"],
+            caption=question["text"],
+            reply_markup=keyboard
+        )
+    else:
+        msg = await bot.send_message(
+            chat_id,
+            text=question["text"],
+            reply_markup=keyboard
+        )
+
     await state.update_data(current_message_id=msg.message_id)
+
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
     index = int(callback.data.split("_")[2])
@@ -343,6 +400,87 @@ async def show_users(message: types.Message):
         await message.answer(f"📋 Користувачі:\n\n{text}")
 
 # <- тут кінець show_users
+@dp.message(F.text == "/my")
+async def my_stats(message: types.Message):
+    user_id = str(message.from_user.id)
+    full_name = message.from_user.full_name
+    username = f"@{message.from_user.username}" if message.from_user.username else "-"
+
+    if not os.path.exists("logs.txt"):
+        await message.answer("📭 Ви ще не проходили жодного тесту.")
+        return
+
+    # Читаємо лог
+    section_scores = {}
+    with open("logs.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            if f"{user_id}" in line and "Завершив" in line and "|" in line:
+                parts = line.strip().split("|")
+                if len(parts) >= 5:
+                    section = parts[3].replace("Завершив: ", "").strip()
+                    score_part = parts[4].strip()
+                    try:
+                        score = int(score_part.replace("%", "").strip())
+                        if section not in section_scores:
+                            section_scores[section] = []
+                        section_scores[section].append(score)
+                    except:
+                        continue
+
+    if not section_scores:
+        await message.answer("📭 Ви ще не завершили жодного тесту.")
+        return
+
+    # Формуємо відповідь
+    total_sum = 0
+    total_count = 0
+    text = f"📊 *Ваша статистика, {full_name}:*\n\n"
+    for section, scores in section_scores.items():
+        avg = round(sum(scores) / len(scores))
+        count = len(scores)
+        text += f"{section}: {avg}% (📈 {count} разів)\n"
+        total_sum += sum(scores)
+        total_count += count
+
+    total_avg = round(total_sum / total_count) if total_count > 0 else 0
+    text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
+
+    await message.answer(text, parse_mode="Markdown")
+@dp.message(F.text.startswith("/block"))
+async def block_user(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    parts = message.text.strip().split()
+    if len(parts) != 2:
+        await message.answer("❗ Формат: /block USER_ID")
+        return
+    user_id = parts[1]
+    with open("blocked.txt", "a+", encoding="utf-8") as f:
+        f.seek(0)
+        blocked = f.read().splitlines()
+        if user_id not in blocked:
+            f.write(user_id + "\n")
+            await message.answer(f"⛔ Користувач {user_id} заблокований.")
+        else:
+            await message.answer(f"⚠️ Користувач {user_id} вже заблокований.")
+
+@dp.message(F.text.startswith("/unblock"))
+async def unblock_user(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+    parts = message.text.strip().split()
+    if len(parts) != 2:
+        await message.answer("❗ Формат: /unblock USER_ID")
+        return
+    user_id = parts[1]
+    if not os.path.exists("blocked.txt"):
+        await message.answer("📂 Файл блокування ще не створено.")
+        return
+    with open("blocked.txt", "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    with open("blocked.txt", "w", encoding="utf-8") as f:
+        f.writelines([line for line in lines if line.strip() != user_id])
+    await message.answer(f"✅ Користувач {user_id} розблокований.")
 
 async def main():
     await dp.start_polling(bot)
