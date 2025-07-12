@@ -481,6 +481,55 @@ async def unblock_user(message: types.Message):
     with open("blocked.txt", "w", encoding="utf-8") as f:
         f.writelines([line for line in lines if line.strip() != user_id])
     await message.answer(f"✅ Користувач {user_id} розблокований.")
+@dp.message(F.text == "/all")
+async def all_stats(message: types.Message):
+    if str(message.from_user.id) != str(ADMIN_ID):
+        return
+
+    if not os.path.exists("logs.txt"):
+        await message.answer("❗ Ще немає жодного проходження.")
+        return
+
+    stats = {}
+    with open("logs.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split("|")
+            if len(parts) < 5 or "Завершив" not in parts[3]:
+                continue
+            name = parts[0].strip()
+            username = parts[1].strip()
+            user_id = parts[2].strip()
+            section = parts[3].replace("Завершив:", "").strip()
+            score_str = parts[4].strip().replace("%", "")
+            try:
+                score = int(score_str)
+            except:
+                continue
+
+            key = f"{name} ({username})"
+            if key not in stats:
+                stats[key] = {}
+            if section not in stats[key]:
+                stats[key][section] = []
+            stats[key][section].append(score)
+
+    if not stats:
+        await message.answer("📭 Статистика порожня.")
+        return
+
+    # Формуємо текст
+    result = "📊 *Статистика всіх користувачів:*\n\n"
+    for user, sections in stats.items():
+        result += f"👤 *{user}*\n"
+        for sec, scores in sections.items():
+            avg = round(sum(scores) / len(scores))
+            count = len(scores)
+            result += f"— {sec}: {avg}% (📈 {count} проходжень)\n"
+        result += "\n"
+
+    # Розбиваємо на частини, якщо довге
+    for chunk in [result[i:i+4000] for i in range(0, len(result), 4000)]:
+        await message.answer(chunk, parse_mode="Markdown")
 
 async def main():
     await dp.start_polling(bot)
