@@ -135,8 +135,8 @@ async def start_quiz(message: types.Message, state: FSMContext):
         return
 
     category = message.text
-
-    questions = sections[category]
+    questions = sections[category][:]
+    random.shuffle(questions)
     log_result(message.from_user, category, started=True)
     await state.set_state(QuizState.category)
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
@@ -194,8 +194,12 @@ async def send_question(message_or_callback, state: FSMContext):
 
     question = questions[index]
     text = question["text"]
-    options = list(enumerate(question["options"]))
-    random.shuffle(options)
+    options = data.get("current_options")
+    if not options:
+        options = list(enumerate(question["options"]))
+        random.shuffle(options)
+        await state.update_data(current_options=options)
+
     selected = data.get("temp_selected", set())
     buttons = [[InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + label, callback_data=f"opt_{i}")] for i, (label, _) in options]
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
@@ -211,8 +215,14 @@ async def confirm_answer(callback: CallbackQuery, state: FSMContext):
     selected = data.get("temp_selected", set())
     selected_options = data.get("selected_options", [])
     selected_options.append(list(selected))
-    await state.update_data(selected_options=selected_options, question_index=data["question_index"] + 1, temp_selected=set())
+    await state.update_data(
+        selected_options=selected_options,
+        question_index=data["question_index"] + 1,
+        temp_selected=set(),
+        current_options=None  # 💡 Очищуємо порядок варіантів для наступного питання
+    )
     await send_question(callback, state)
+
 
 @dp.callback_query(F.data.startswith("opt_"))
 async def toggle_option(callback: CallbackQuery, state: FSMContext):
