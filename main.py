@@ -59,21 +59,21 @@ def save_user_if_new(user: types.User, section: str):
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
-
+    
     with open("logs.txt", "a", encoding="utf-8") as f:
         if started:
             f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
         else:
             f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
-
+    
     text = (
-        f"👤 {full_name} ({username})\n"
-        f"🆔 ID: {user.id}\n"
-        f"🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
-    )
-    if score is not None:
-        text += f"\n📊 Результат: {score}%"
-
+    f"👤 {full_name} ({username})\n"
+    f"🆔 ID: {user.id}\n"
+    f"🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
+)
+if score is not None:
+    text += f"\n📊 Результат: {score}%"
+    
     for admin_id in ADMIN_IDS:
         asyncio.create_task(bot.send_message(admin_id, text))
 
@@ -135,8 +135,8 @@ async def start_quiz(message: types.Message, state: FSMContext):
         return
 
     category = message.text
-    questions = sections[category][:]
-    random.shuffle(questions)
+
+    questions = sections[category]
     log_result(message.from_user, category, started=True)
     await state.set_state(QuizState.category)
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
@@ -159,28 +159,6 @@ async def send_question(message_or_callback, state: FSMContext):
                 wrongs.append({
                     "question": q["text"],
                     "options": q["options"],
-                    "selected": list(user_selected),
-                    "correct": list(correct_answers)
-                })
-        async def send_question(message_or_callback, state: FSMContext):
-    data = await state.get_data()
-    questions = data["questions"]
-    index = data["question_index"]
-
-    # 🔚 Перевірка на завершення тесту
-    if index >= len(questions):
-        correct = 0
-        wrongs = []
-        for i, q in enumerate(questions):
-            question_opts = data["question_options"][i]
-            correct_answers = {j for j, (_, is_correct) in enumerate(question_opts) if is_correct}
-            user_selected = set(data["selected_options"][i])
-            if correct_answers == user_selected:
-                correct += 1
-            else:
-                wrongs.append({
-                    "question": q["text"],
-                    "options": question_opts,
                     "selected": list(user_selected),
                     "correct": list(correct_answers)
                 })
@@ -214,34 +192,18 @@ async def send_question(message_or_callback, state: FSMContext):
             await message_or_callback.answer(result, reply_markup=keyboard, parse_mode="Markdown")
         return
 
-    # ✅ ВСТАВЛЯЄШ ТУТ — показ нового питання
     question = questions[index]
     text = question["text"]
-
-    options = data.get("current_options")
-    if not options:
-        options = list(enumerate(question["options"]))
-        random.shuffle(options)
-        await state.update_data(current_options=options)
-
-        # Зберігаємо варіанти для цього питання
-        all_q_opts = data.get("question_options", [])
-        all_q_opts.append(options)
-        await state.update_data(question_options=all_q_opts)
-
+    options = list(enumerate(question["options"]))
+    random.shuffle(options)
     selected = data.get("temp_selected", set())
-    buttons = [
-        [InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + label, callback_data=f"opt_{i}")]
-        for i, (label, _) in options
-    ]
+    buttons = [[InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + label, callback_data=f"opt_{i}")] for i, (label, _) in options]
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
-
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
         await message_or_callback.answer(text, reply_markup=keyboard)
-
 
 @dp.callback_query(F.data == "confirm")
 async def confirm_answer(callback: CallbackQuery, state: FSMContext):
@@ -249,14 +211,8 @@ async def confirm_answer(callback: CallbackQuery, state: FSMContext):
     selected = data.get("temp_selected", set())
     selected_options = data.get("selected_options", [])
     selected_options.append(list(selected))
-    await state.update_data(
-        selected_options=selected_options,
-        question_index=data["question_index"] + 1,
-        temp_selected=set(),
-        current_options=None  # 💡 Очищуємо порядок варіантів для наступного питання
-    )
+    await state.update_data(selected_options=selected_options, question_index=data["question_index"] + 1, temp_selected=set())
     await send_question(callback, state)
-
 
 @dp.callback_query(F.data.startswith("opt_"))
 async def toggle_option(callback: CallbackQuery, state: FSMContext):
