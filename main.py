@@ -204,17 +204,25 @@ async def send_question(message_or_callback, state: FSMContext):
         log_result(message_or_callback.from_user, data["category"], percent)
         save_user_if_new(message_or_callback.from_user, data["category"])
 
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+             keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔁 Пройти ще раз", callback_data="restart")],
             [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="details")]
         ])
 
-        await bot.send_message(
-            chat_id=message_or_callback.from_user.id,
-            text=result,
-            reply_markup=keyboard,
-            parse_mode="Markdown"
-        )
+        if isinstance(message_or_callback, CallbackQuery):
+            await message_or_callback.message.answer(
+                result,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+        else:
+            await bot.send_message(
+                chat_id=message_or_callback.chat.id,
+                text=result,
+                reply_markup=keyboard,
+                parse_mode="Markdown"
+            )
+
         return
 
     # Якщо питання ще є — показати наступне
