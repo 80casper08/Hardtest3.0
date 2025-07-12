@@ -204,7 +204,7 @@ async def send_question(message_or_callback, state: FSMContext):
         log_result(message_or_callback.from_user, data["category"], percent)
         save_user_if_new(message_or_callback.from_user, data["category"])
 
-             keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🔁 Пройти ще раз", callback_data="restart")],
             [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="details")]
         ])
@@ -245,6 +245,7 @@ async def send_question(message_or_callback, state: FSMContext):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
         await message_or_callback.answer(text, reply_markup=keyboard)
+
 
 
 @dp.callback_query(F.data == "confirm")
