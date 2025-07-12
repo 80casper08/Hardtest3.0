@@ -152,7 +152,7 @@ async def cmd_start(message: types.Message):
 async def start_quiz(message: types.Message, state: FSMContext):
     user_id = str(message.from_user.id)
     if is_blocked(user_id):
-        await message.answer("Бот тимчасово не працює")
+        await message.answer("🚫Бот тимчасово непрацює🚫")
         return
 
     category = message.text
@@ -289,7 +289,7 @@ async def start_hard_test(message: types.Message, state: FSMContext):
         with open("blocked.txt", "r", encoding="utf-8") as f:
             blocked_ids = f.read().splitlines()
         if user_id in blocked_ids:
-            await message.answer("Бот тимчасово не працює")
+            await message.answer("🚫Бот тимчасово непрацює🚫")
             return
 
     log_result(message.from_user, "👀Hard Test👀", started=True)
