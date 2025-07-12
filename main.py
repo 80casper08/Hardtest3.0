@@ -399,27 +399,32 @@ async def show_users(message: types.Message):
         text = f.read()
         await message.answer(f"📋 Користувачі:\n\n{text}")
 
-# <- тут кінець show_users
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
     user_id = str(message.from_user.id)
     full_name = message.from_user.full_name
     username = f"@{message.from_user.username}" if message.from_user.username else "-"
-    with open("logs.txt", "a", encoding="utf-8") as f:
-    f.write(f"{message.from_user.full_name} | @{message.from_user.username or '-'} | {message.from_user.id} | Переглянув статистику (/my)\n")
 
+    # 🔹 Логування у файл
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | {username} | {user_id} | Переглянув статистику (/my)\n")
+
+    # 🔹 Повідомлення адміну
+    await bot.send_message(ADMIN_ID, f"👁 {full_name} ({username}) переглянув свою статистику")
+
+    # 🔸 Якщо логів ще немає
     if not os.path.exists("logs.txt"):
         await message.answer("📭 Ви ще не проходили жодного тесту.")
         return
 
-    # Читаємо лог
+    # 🔍 Збір результатів з логів
     section_scores = {}
     with open("logs.txt", "r", encoding="utf-8") as f:
         for line in f:
             if f"{user_id}" in line and "Завершив" in line and "|" in line:
                 parts = line.strip().split("|")
                 if len(parts) >= 5:
-                    section = parts[3].replace("Завершив: ", "").strip()
+                    section = parts[3].replace("Завершив:", "").strip()
                     score_part = parts[4].strip()
                     try:
                         score = int(score_part.replace("%", "").strip())
@@ -433,7 +438,7 @@ async def my_stats(message: types.Message):
         await message.answer("📭 Ви ще не завершили жодного тесту.")
         return
 
-    # Формуємо відповідь
+    # 🧾 Формування відповіді
     total_sum = 0
     total_count = 0
     text = f"📊 *Ваша статистика, {full_name}:*\n\n"
@@ -448,6 +453,8 @@ async def my_stats(message: types.Message):
     text += f"\n🏁 *Загальний середній результат:* {total_avg}%"
 
     await message.answer(text, parse_mode="Markdown")
+
+
 @dp.message(F.text.startswith("/block"))
 async def block_user(message: types.Message):
     if str(message.from_user.id) != str(ADMIN_ID):
