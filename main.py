@@ -66,9 +66,13 @@ def log_result(user: types.User, section: str, score: int = None, started: bool 
         else:
             f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
     
-    text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
-    if score is not None:
-        text += f"\n📊 Результат: {score}%"
+    text = (
+    f"👤 {full_name} ({username})\n"
+    f"🆔 ID: {user.id}\n"
+    f"🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
+)
+if score is not None:
+    text += f"\n📊 Результат: {score}%"
     
     for admin_id in ADMIN_IDS:
         asyncio.create_task(bot.send_message(admin_id, text))
