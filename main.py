@@ -183,6 +183,7 @@ async def send_question(message_or_callback, state: FSMContext):
                     "selected": list(user_selected),
                     "correct": list(correct_answers)
                 })
+
         await state.update_data(wrong_answers=wrongs)
         percent = round(correct / len(questions) * 100)
         grade = "❌ Погано"
@@ -207,24 +208,36 @@ async def send_question(message_or_callback, state: FSMContext):
             [InlineKeyboardButton(text="🔁 Пройти ще раз", callback_data="restart")],
             [InlineKeyboardButton(text="📋 Детальна інформація", callback_data="details")]
         ])
-        if isinstance(message_or_callback, CallbackQuery):
-            await message_or_callback.message.answer(result, reply_markup=keyboard, parse_mode="Markdown")
-        else:
-            await message_or_callback.answer(result, reply_markup=keyboard, parse_mode="Markdown")
+
+        await bot.send_message(
+            chat_id=message_or_callback.from_user.id,
+            text=result,
+            reply_markup=keyboard,
+            parse_mode="Markdown"
+        )
         return
 
+    # Якщо питання ще є — показати наступне
     question = questions[index]
     text = question["text"]
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     selected = data.get("temp_selected", set())
-    buttons = [[InlineKeyboardButton(text=("✅ " if i in selected else "◻️ ") + label, callback_data=f"opt_{i}")] for i, (label, _) in options]
+
+    buttons = [[
+        InlineKeyboardButton(
+            text=("✅ " if i in selected else "◻️ ") + label,
+            callback_data=f"opt_{i}"
+        )
+    ] for i, (label, _) in options]
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
         await message_or_callback.answer(text, reply_markup=keyboard)
+
 
 @dp.callback_query(F.data == "confirm")
 async def confirm_answer(callback: CallbackQuery, state: FSMContext):
