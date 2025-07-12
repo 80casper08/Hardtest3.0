@@ -109,7 +109,7 @@ async def cmd_start(message: types.Message):
 async def start_quiz(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     if is_blocked(user_id):
-        await message.answer("Бот тимчасово непрацює")
+        await message.answer("🚫Бот тимчасово непрацює🔐")
         return
 
     category = message.text
@@ -247,7 +247,7 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 async def start_hard_test(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
     if is_blocked(user_id):
-        await message.answer("Бот тимчасово непрацює")
+        await message.answer("🚫Бот тимчасово непрацює🔐")
         return
 
     log_result(message.from_user, "👀Hard Test👀", started=True)
