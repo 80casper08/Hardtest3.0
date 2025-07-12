@@ -349,7 +349,7 @@ async def send_hard_question(chat_id, state: FSMContext):
         log_result(user, "👀Hard Test👀", percent)
         save_user_if_new(user, "👀Hard Test👀")
 
-       async def send_hard_question(chat_id, state: FSMContext):
+async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
     questions = data.get("questions", hard_questions)
