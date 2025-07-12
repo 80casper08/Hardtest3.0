@@ -405,6 +405,8 @@ async def my_stats(message: types.Message):
     user_id = str(message.from_user.id)
     full_name = message.from_user.full_name
     username = f"@{message.from_user.username}" if message.from_user.username else "-"
+    with open("logs.txt", "a", encoding="utf-8") as f:
+    f.write(f"{message.from_user.full_name} | @{message.from_user.username or '-'} | {message.from_user.id} | Переглянув статистику (/my)\n")
 
     if not os.path.exists("logs.txt"):
         await message.answer("📭 Ви ще не проходили жодного тесту.")
