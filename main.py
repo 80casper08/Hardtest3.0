@@ -55,34 +55,34 @@ def is_blocked(user_id: int) -> bool:
 # ✅ Запис користувача у users.txt без дублікатів розділів
 # ✅ Запис користувача у users.txt без дублікатів розділів
 def save_user_if_new(user: types.User, section: str):
-    full_name = clean_markdown(user.full_name)
-    username = clean_markdown(f"@{user.username}") if user.username else "-"
     user_id = str(user.id)
+    full_name = user.full_name
+    username = f"@{user.username}" if user.username else "-"
     entry_prefix = f"{user_id} | {full_name} | {username}"
 
-    # Створити файл, якщо не існує
     if not os.path.exists("users.txt"):
         with open("users.txt", "w", encoding="utf-8") as f:
             f.write("")
 
-    # Прочитати всі рядки
     with open("users.txt", "r", encoding="utf-8") as f:
         lines = f.readlines()
 
-    # Оновити або додати
+    updated = False
     new_lines = []
-    found = False
+
     for line in lines:
         if line.startswith(entry_prefix):
-            found = True
-            parts = line.strip().split(" | ")
-            existing_sections = parts[3:] if len(parts) > 3 else []
-            if section not in existing_sections:
-                existing_sections.append(section)
-            new_line = f"{entry_prefix} | {' | '.join(sorted(set(existing_sections)))}\n"
-            new_lines.append(new_line)
-        else:
-            new_lines.append(line)
+            if section not in line:
+                line = line.strip() + f" | {section}\n"
+            updated = True
+        new_lines.append(line)
+
+    if not updated:
+        new_lines.append(f"{entry_prefix} | {section}\n")
+
+    with open("users.txt", "w", encoding="utf-8") as f:
+        f.writelines(new_lines)
+
 
     if not found:
         new_lines.append(f"{entry_prefix} | {section}\n")
@@ -138,8 +138,7 @@ def main_keyboard(user_id=None):
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
     if str(user_id) == str(ADMIN_ID):
-        buttons.append(types.KeyboardButton(text="ℹ️ Інфо"))
-        buttons.append(types.KeyboardButton(text="📊 Статистика"))  # НОВА
+        buttons.append(types.KeyboardButton(text="ℹ️ Інфо")) # НОВА
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
 
 
@@ -504,63 +503,17 @@ async def info_admin(message: types.Message):
         await message.answer("Немає записів користувачів.")
         return
 
-    users = {}
-
     with open("users.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            parts = line.strip().split(" | ")
-            if len(parts) < 4:
-                continue
-            user_id, full_name, username, *sections = parts
-            key = f"{user_id} | {full_name} | {username}"
-            users[key] = sections
+        lines = f.readlines()
 
-    blocks = []
-    for user_key, sections in users.items():
-        line = f"{user_key} | {' | '.join(sections)}"
-        blocks.append(line)
-
-    output = "\n".join(blocks)
-    for i in range(0, len(output), 4000):
-        await message.answer(f"<pre>{output[i:i+4000]}</pre>", parse_mode="HTML")
-
-
-
-@dp.message(F.text == "📊 Статистика")
-async def admin_stats(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
-        return
-
-    if not os.path.exists("scores.txt"):
-        await message.answer("Ще немає результатів.")
-        return
-
-    from collections import defaultdict
-    user_data = defaultdict(lambda: defaultdict(list))
-    user_info = {}
-
-    with open("scores.txt", "r", encoding="utf-8") as f:
-        for line in f:
-            parts = line.strip().split(" | ")
-            if len(parts) != 5:
-                continue
-            user_id, full_name, username, section, score = parts
-            score = int(score)
-            user_data[user_id][section].append(score)
-            user_info[user_id] = (full_name, username)
-
-    blocks = []
-    for user_id, sections in user_data.items():
-        full_name, username = user_info[user_id]
-        block = f"📄 *{full_name}* ({username})\n"
-        for section, scores in sections.items():
-            avg = round(sum(scores) / len(scores), 1)
-            block += f"{section}: {len(scores)} проходжень, середній: {avg}%\n"
-        blocks.append(block)
-
-    for block in blocks:
-        await message.answer(block, parse_mode="Markdown")
-
+    batch = ""
+    for line in lines:
+        if len(batch + line) > 4000:
+            await message.answer(batch)
+            batch = ""
+        batch += line
+    if batch:
+        await message.answer(batch)
 
 @dp.message(F.text.startswith("/block"))
 async def block_user(message: types.Message):
