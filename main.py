@@ -572,45 +572,36 @@ async def block_user(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    parts = message.text.strip().split()
-    if len(parts) != 2:
-        await message.answer("❗ Формат: /blockUSER_ID")
+    user_id = message.text.replace("/block", "").strip()
+    if not user_id.isdigit():
+        await message.answer("❗ Формат: /blockUSER_ID (без пробілу)")
         return
-
-    user_id = parts[1]
 
     with open("blocked.txt", "a+", encoding="utf-8") as f:
         f.seek(0)
         blocked = f.read().splitlines()
+
         if user_id not in blocked:
             f.write(user_id + "\n")
-
-            # Отримати інформацію про користувача
             try:
                 user = await bot.get_chat(user_id)
-                full_name = user.full_name
-                username = f"@{user.username}" if user.username else "-"
+                name = f"{user.full_name} (@{user.username})" if user.username else user.full_name
             except:
-                full_name = "Невідомо"
-                username = "-"
-
-            await message.answer(
-                f"⛔ Користувач {full_name} ({username}) заблокований\n/unblock{user_id}"
-            )
+                name = f"ID: {user_id}"
+            await message.answer(f"⛔ Заблоковано: {name}\n/unblock{user_id}")
         else:
             await message.answer(f"⚠️ Користувач {user_id} вже заблокований.")
+
 
 @dp.message(F.text.startswith("/unblock"))
 async def unblock_user(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
 
-    parts = message.text.strip().split()
-    if len(parts) != 2:
-        await message.answer("❗ Формат: /unblockUSER_ID")
+    user_id = message.text.replace("/unblock", "").strip()
+    if not user_id.isdigit():
+        await message.answer("❗ Формат: /unblockUSER_ID (без пробілу)")
         return
-
-    user_id = parts[1]
 
     if not os.path.exists("blocked.txt"):
         await message.answer("📂 Файл блокування ще не створено.")
@@ -618,21 +609,18 @@ async def unblock_user(message: types.Message):
 
     with open("blocked.txt", "r", encoding="utf-8") as f:
         lines = f.readlines()
+
     with open("blocked.txt", "w", encoding="utf-8") as f:
         f.writelines([line for line in lines if line.strip() != user_id])
 
-    # Отримати інформацію про користувача
     try:
         user = await bot.get_chat(user_id)
-        full_name = user.full_name
-        username = f"@{user.username}" if user.username else "-"
+        name = f"{user.full_name} (@{user.username})" if user.username else user.full_name
     except:
-        full_name = "Невідомо"
-        username = "-"
+        name = f"ID: {user_id}"
 
-    await message.answer(
-        f"✅ Користувач {full_name} ({username}) розблокований\n/block{user_id}"
-    )
+    await message.answer(f"✅ Розблоковано: {name}\n/block{user_id}")
+
 
 @dp.message(F.text == "/all")
 async def all_stats(message: types.Message):
