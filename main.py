@@ -565,17 +565,32 @@ async def my_stats(message: types.Message):
 async def block_user(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
+
     parts = message.text.strip().split()
     if len(parts) != 2:
         await message.answer("❗ Формат: /block USER_ID")
         return
+
     user_id = parts[1]
+
     with open("blocked.txt", "a+", encoding="utf-8") as f:
         f.seek(0)
         blocked = f.read().splitlines()
         if user_id not in blocked:
             f.write(user_id + "\n")
-            await message.answer(f"⛔ Користувач {user_id} заблокований.")
+
+            # Отримати інформацію про користувача
+            try:
+                user = await bot.get_chat(user_id)
+                full_name = user.full_name
+                username = f"@{user.username}" if user.username else "-"
+            except:
+                full_name = "Невідомо"
+                username = "-"
+
+            await message.answer(
+                f"⛔ Користувач {full_name} ({username}) заблокований\n/unblock {user_id}"
+            )
         else:
             await message.answer(f"⚠️ Користувач {user_id} вже заблокований.")
 
@@ -583,19 +598,36 @@ async def block_user(message: types.Message):
 async def unblock_user(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
         return
+
     parts = message.text.strip().split()
     if len(parts) != 2:
         await message.answer("❗ Формат: /unblock USER_ID")
         return
+
     user_id = parts[1]
+
     if not os.path.exists("blocked.txt"):
         await message.answer("📂 Файл блокування ще не створено.")
         return
+
     with open("blocked.txt", "r", encoding="utf-8") as f:
         lines = f.readlines()
     with open("blocked.txt", "w", encoding="utf-8") as f:
         f.writelines([line for line in lines if line.strip() != user_id])
-    await message.answer(f"✅ Користувач {user_id} розблокований.")
+
+    # Отримати інформацію про користувача
+    try:
+        user = await bot.get_chat(user_id)
+        full_name = user.full_name
+        username = f"@{user.username}" if user.username else "-"
+    except:
+        full_name = "Невідомо"
+        username = "-"
+
+    await message.answer(
+        f"✅ Користувач {full_name} ({username}) розблокований\n/block {user_id}"
+    )
+
 @dp.message(F.text == "/all")
 async def all_stats(message: types.Message):
     if message.from_user.id not in ADMIN_IDS:
