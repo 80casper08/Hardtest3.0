@@ -574,7 +574,7 @@ async def block_user(message: types.Message):
 
     parts = message.text.strip().split()
     if len(parts) != 2:
-        await message.answer("❗ Формат: /block USER_ID")
+        await message.answer("❗ Формат: /blockUSER_ID")
         return
 
     user_id = parts[1]
@@ -595,7 +595,7 @@ async def block_user(message: types.Message):
                 username = "-"
 
             await message.answer(
-                f"⛔ Користувач {full_name} ({username}) заблокований\n/unblock {user_id}"
+                f"⛔ Користувач {full_name} ({username}) заблокований\n/unblock{user_id}"
             )
         else:
             await message.answer(f"⚠️ Користувач {user_id} вже заблокований.")
@@ -607,7 +607,7 @@ async def unblock_user(message: types.Message):
 
     parts = message.text.strip().split()
     if len(parts) != 2:
-        await message.answer("❗ Формат: /unblock USER_ID")
+        await message.answer("❗ Формат: /unblockUSER_ID")
         return
 
     user_id = parts[1]
@@ -631,7 +631,7 @@ async def unblock_user(message: types.Message):
         username = "-"
 
     await message.answer(
-        f"✅ Користувач {full_name} ({username}) розблокований\n/block {user_id}"
+        f"✅ Користувач {full_name} ({username}) розблокований\n/block{user_id}"
     )
 
 @dp.message(F.text == "/all")
