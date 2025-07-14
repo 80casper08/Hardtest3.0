@@ -109,11 +109,16 @@ def main_keyboard(user_id=None):
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
     user = message.from_user
-    full_name = user.full_name
-    username = f"@{user.username}" if user.username else "-"
     user_id = user.id
 
-    # Запис у лог
+    if is_blocked(user_id):
+        await message.answer("🚫Бот тимчасово непрацює🔐")
+        return
+
+    full_name = user.full_name
+    username = f"@{user.username}" if user.username else "-"
+
+    # Логування
     with open("logs.txt", "a", encoding="utf-8") as f:
         f.write(f"{full_name} | {username} | {user_id} | Натиснув /start\n")
 
@@ -125,6 +130,7 @@ async def cmd_start(message: types.Message):
         )
 
     await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard(user_id))
+
 
 
 @dp.message(F.text.in_(sections.keys()))
