@@ -30,7 +30,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_IDS = [710633503, 716119785]
-GROUP_ID = -1001234567890  # 🔁 заміни на реальний ID своєї групи
+GROUP_ID = -1002566266576  # 🔁 заміни на реальний ID своєї групи
 
 async def notify_group(text: str):
     try:
@@ -664,13 +664,6 @@ async def admin_panel(message: types.Message):
         [InlineKeyboardButton(text="✅ Розблокувати", callback_data="admin_unblock")]
     ])
     await message.answer("🛠 Адмін-панель:", reply_markup=keyboard)
-@dp.message(F.text == "/groupid")
-async def send_group_id(message: types.Message):
-    if message.chat.type in ("group", "supergroup"):
-        await message.answer(f"🆔 ID цієї групи: `{message.chat.id}`", parse_mode="Markdown")
-    else:
-        await message.answer("❗ Цю команду потрібно надіслати в групу.")
-
 
 async def main():
     await dp.start_polling(bot)
