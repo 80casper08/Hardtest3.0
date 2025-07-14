@@ -501,14 +501,14 @@ async def show_blocked_users(callback: CallbackQuery):
 async def ask_block_user(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
-    await callback.message.answer("Введи ID користувача, якого потрібно ⛔ *заблокувати*:\n\nНапиши: `/block USER_ID`", parse_mode="Markdown")
+    await callback.message.answer("Введи ID користувача, якого потрібно ⛔ *заблокувати*:\n\nНапиши: `/blockID`", parse_mode="Markdown")
 
 
 @dp.callback_query(F.data == "admin_unblock")
 async def ask_unblock_user(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
-    await callback.message.answer("Введи ID користувача, якого потрібно ✅ *розблокувати*:\n\nНапиши: `/unblock USER_ID`", parse_mode="Markdown")
+    await callback.message.answer("Введи ID користувача, якого потрібно ✅ *розблокувати*:\n\nНапиши: `/unblockID`", parse_mode="Markdown")
 
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
