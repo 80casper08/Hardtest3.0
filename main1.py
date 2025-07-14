@@ -29,7 +29,21 @@ TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-ADMIN_ID = 710633503
+ADMIN_IDS = [710633503, 716119785]
+GROUP_ID = -1001234567890  # 🔁 заміни на реальний ID своєї групи
+
+async def notify_group(text: str):
+    try:
+        await bot.send_message(GROUP_ID, text)
+    except Exception as e:
+        print(f"[GROUP ERROR] {e}")
+GROUP_ID = -1001234567890  # 🔁 заміни на ID своєї групи
+
+async def notify_group(text: str):
+    try:
+        await bot.send_message(GROUP_ID, text)
+    except Exception as e:
+        print(f"[GROUP ERROR] {e}")
 
 def is_blocked(user_id: int) -> bool:
     if not os.path.exists("blocked.txt"):
@@ -37,16 +51,12 @@ def is_blocked(user_id: int) -> bool:
     with open("blocked.txt", "r", encoding="utf-8") as f:
         return str(user_id) in f.read().splitlines()
 
-
-# Запис користувача у users.txt без дублікатів
 def save_user_if_new(user: types.User, section: str):
     full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
-
     if not os.path.exists("users.txt"):
         with open("users.txt", "w", encoding="utf-8") as uf:
             uf.write("")
-
     with open("users.txt", "a+", encoding="utf-8") as uf:
         uf.seek(0)
         existing = uf.read()
@@ -54,23 +64,28 @@ def save_user_if_new(user: types.User, section: str):
         if entry.strip() not in [line.strip() for line in existing.strip().split("\n") if line.strip()]:
             uf.write(entry)
 
-# Запис події до logs.txt + повідомлення адміну
 def log_result(user: types.User, section: str, score: int = None, started: bool = False):
     full_name = f"{user.full_name}"
     username = f"@{user.username}" if user.username else "-"
-    
+    user_id = user.id
+
     with open("logs.txt", "a", encoding="utf-8") as f:
         if started:
-            f.write(f"{full_name} | {username} | {user.id} | Розпочав: {section}\n")
+            f.write(f"{full_name} | {username} | {user_id} | Розпочав: {section}\n")
         else:
-            f.write(f"{full_name} | {username} | {user.id} | Завершив: {section} | {score}%\n")
-    
-    text = f"👤 {full_name} ({username})\n🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
+            f.write(f"{full_name} | {username} | {user_id} | Завершив: {section} | {score}%\n")
+
+    text = (
+        f"👤 {full_name} ({username})\n"
+        f"🆔 ID: {user_id}\n"
+        f"🧪 {'Почав' if started else 'Закінчив'} розділ: {section}"
+    )
     if score is not None:
         text += f"\n📊 Результат: {score}%"
-    
-    asyncio.create_task(bot.send_message(ADMIN_ID, text))
 
+    for admin_id in ADMIN_IDS:
+        asyncio.create_task(bot.send_message(admin_id, text))
+    asyncio.create_task(notify_group(text))
 
 class QuizState(StatesGroup):
     category = State()
@@ -95,14 +110,26 @@ sections = {
 def main_keyboard(user_id=None):
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
-    if str(user_id) == str(ADMIN_ID):
+    if user_id in ADMIN_IDS:
         buttons.append(types.KeyboardButton(text="ℹ️ Інфо"))
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
 
-
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
- await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard(message.from_user.id))
+    user = message.from_user
+    full_name = user.full_name
+    username = f"@{user.username}" if user.username else "-"
+    user_id = user.id
+
+    with open("logs.txt", "a", encoding="utf-8") as f:
+        f.write(f"{full_name} | {username} | {user_id} | Натиснув /start\n")
+
+    for admin_id in ADMIN_IDS:
+        await bot.send_message(admin_id, f"🚀 /start натиснув користувач:\n👤 {full_name} ({username})\n🆔 ID: {user_id}")
+
+    await notify_group(f"🚀 /start натиснув:\n👤 {full_name} ({username})\n🆔 ID: {user_id}")
+
+    await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard(user_id))
 
 
 @dp.message(F.text.in_(sections.keys()))
@@ -349,7 +376,7 @@ async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
             callback_data=f"hard_opt_{i}"
         )
     ] for i, (text, _) in options]
-    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
+    buttons.append([InlineKeyboardButton(text="✅Підтвердити", callback_data="hard_confirm")])
     await bot.edit_message_reply_markup(
         chat_id=callback.message.chat.id,
         message_id=data["current_message_id"],
@@ -388,16 +415,99 @@ async def show_hard_details(callback: CallbackQuery, state: FSMContext):
     else:
         for block in blocks:
             await bot.send_message(callback.message.chat.id, block, parse_mode="Markdown")
-@dp.message(F.text.in_(["ℹ️ Інфо", "/users"]))
-async def show_users(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
+          
+# 🛠 Обробка кнопок адмін-панелі
+@dp.callback_query(F.data == "admin_users")
+async def show_users_callback(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
         return
     if not os.path.exists("users.txt"):
-        await message.answer("Жоден користувач ще не проходив тести.")
+        await callback.message.answer("Жоден користувач ще не проходив тести.")
         return
     with open("users.txt", "r", encoding="utf-8") as f:
         text = f.read()
-        await message.answer(f"📋 Користувачі:\n\n{text}")
+    await callback.message.answer(f"📋 Користувачі:\n\n{text}")
+
+
+@dp.callback_query(F.data == "admin_stats")
+async def all_stats_callback(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+       return
+
+    message = callback.message
+    await callback.answer()  # закриває "loading"
+    
+    if not os.path.exists("logs.txt"):
+        await message.answer("❗ Ще немає жодного проходження.")
+        return
+
+    stats = {}
+    with open("logs.txt", "r", encoding="utf-8") as f:
+        for line in f:
+            parts = line.strip().split("|")
+            if len(parts) < 5 or "Завершив" not in parts[3]:
+                continue
+            name = parts[0].strip()
+            username = parts[1].strip()
+            user_id = parts[2].strip()
+            section = parts[3].replace("Завершив:", "").strip()
+            score_str = parts[4].strip().replace("%", "")
+            try:
+                score = int(score_str)
+            except:
+                continue
+
+            key = f"{name} ({username})"
+            if key not in stats:
+                stats[key] = {}
+            if section not in stats[key]:
+                stats[key][section] = []
+            stats[key][section].append(score)
+
+    if not stats:
+        await message.answer("📭 Статистика порожня.")
+        return
+
+    result = "📊 *Статистика всіх користувачів:*\n\n"
+    for user, sections in stats.items():
+        result += f"👤 *{user}*\n"
+        for sec, scores in sections.items():
+            avg = round(sum(scores) / len(scores))
+            count = len(scores)
+            result += f"— {sec}: {avg}% (📈 {count} проходжень)\n"
+        result += "\n"
+
+    for chunk in [result[i:i+4000] for i in range(0, len(result), 4000)]:
+        await message.answer(chunk, parse_mode="Markdown")
+
+
+@dp.callback_query(F.data == "admin_blocked_list")
+async def show_blocked_users(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+       return
+    if not os.path.exists("blocked.txt"):
+        await callback.message.answer("📁 Файл `blocked.txt` ще не створений.")
+        return
+    with open("blocked.txt", "r", encoding="utf-8") as f:
+        lines = f.read().strip()
+    if not lines:
+        await callback.message.answer("✅ Немає заблокованих користувачів.")
+    else:
+        await callback.message.answer(f"⛔ Заблоковані користувачі:\n\n{lines}")
+
+
+@dp.callback_query(F.data == "admin_block")
+async def ask_block_user(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+    await callback.message.answer("Введи ID користувача, якого потрібно ⛔ *заблокувати*:\n\nНапиши: `/block USER_ID`", parse_mode="Markdown")
+
+
+@dp.callback_query(F.data == "admin_unblock")
+async def ask_unblock_user(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+    await callback.message.answer("Введи ID користувача, якого потрібно ✅ *розблокувати*:\n\nНапиши: `/unblock USER_ID`", parse_mode="Markdown")
 
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
@@ -410,7 +520,8 @@ async def my_stats(message: types.Message):
         f.write(f"{full_name} | {username} | {user_id} | Переглянув статистику (/my)\n")
 
     # 🔹 Повідомлення адміну
-    await bot.send_message(ADMIN_ID, f"👁 {full_name} ({username}) переглянув свою статистику")
+    for admin_id in ADMIN_IDS:
+       await bot.send_message(admin_id, f"👁 {full_name} ({username}) переглянув свою статистику")
 
     # 🔸 Якщо логів ще немає
     if not os.path.exists("logs.txt"):
@@ -457,7 +568,7 @@ async def my_stats(message: types.Message):
 
 @dp.message(F.text.startswith("/block"))
 async def block_user(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
+    if message.from_user.id not in ADMIN_IDS:
         return
     parts = message.text.strip().split()
     if len(parts) != 2:
@@ -475,7 +586,7 @@ async def block_user(message: types.Message):
 
 @dp.message(F.text.startswith("/unblock"))
 async def unblock_user(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
+    if message.from_user.id not in ADMIN_IDS:
         return
     parts = message.text.strip().split()
     if len(parts) != 2:
@@ -492,7 +603,7 @@ async def unblock_user(message: types.Message):
     await message.answer(f"✅ Користувач {user_id} розблокований.")
 @dp.message(F.text == "/all")
 async def all_stats(message: types.Message):
-    if str(message.from_user.id) != str(ADMIN_ID):
+    if message.from_user.id not in ADMIN_IDS:
         return
 
     if not os.path.exists("logs.txt"):
@@ -539,6 +650,27 @@ async def all_stats(message: types.Message):
     # Розбиваємо на частини, якщо довге
     for chunk in [result[i:i+4000] for i in range(0, len(result), 4000)]:
         await message.answer(chunk, parse_mode="Markdown")
+
+
+@dp.message(F.text == "ℹ️ Інфо")
+async def admin_panel(message: types.Message):
+    if message.from_user.id not in ADMIN_IDS:
+        return
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📋 Користувачі", callback_data="admin_users")],
+        [InlineKeyboardButton(text="📊 Статистика", callback_data="admin_stats")],
+        [InlineKeyboardButton(text="⛔ Заблоковані", callback_data="admin_blocked_list")],
+        [InlineKeyboardButton(text="🚫 Заблокувати", callback_data="admin_block")],
+        [InlineKeyboardButton(text="✅ Розблокувати", callback_data="admin_unblock")]
+    ])
+    await message.answer("🛠 Адмін-панель:", reply_markup=keyboard)
+@dp.message(F.text == "/groupid")
+async def send_group_id(message: types.Message):
+    if message.chat.type in ("group", "supergroup"):
+        await message.answer(f"🆔 ID цієї групи: `{message.chat.id}`", parse_mode="Markdown")
+    else:
+        await message.answer("❗ Цю команду потрібно надіслати в групу.")
+
 
 async def main():
     await dp.start_polling(bot)
