@@ -37,13 +37,6 @@ async def notify_group(text: str):
         await bot.send_message(GROUP_ID, text)
     except Exception as e:
         print(f"[GROUP ERROR] {e}")
-GROUP_ID = -1001234567890  # 🔁 заміни на ID своєї групи
-
-async def notify_group(text: str):
-    try:
-        await bot.send_message(GROUP_ID, text)
-    except Exception as e:
-        print(f"[GROUP ERROR] {e}")
 
 def is_blocked(user_id: int) -> bool:
     if not os.path.exists("blocked.txt"):
