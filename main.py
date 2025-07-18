@@ -31,7 +31,7 @@ dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_IDS = [710633503, 716119785]
 GROUP_ID = -1002786428793  
-PING_INTERVAL = 5 * 60 * 60 
+PING_INTERVAL = 8 * 60 * 60 
 
 
 def is_blocked(user_id: int) -> bool:
