@@ -685,8 +685,8 @@ async def admin_panel(message: types.Message):
         [InlineKeyboardButton(text="✅ Розблокувати", callback_data="admin_unblock")]
     ])
     await message.answer("🛠 Адмін-панель:", reply_markup=keyboard)
-  GROUP_ID = -1001234567890  # 🔴 ТУТ ВСТАВ СВІЙ ID ГРУПИ
-PING_INTERVAL = 5 * 60 * 60  # 5 годин у секундах
+  GROUP_ID = -1002786428793  
+PING_INTERVAL = 5 * 60 * 60 
 
 async def send_ping():
     while True:
