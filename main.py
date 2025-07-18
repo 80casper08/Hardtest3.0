@@ -30,6 +30,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 ADMIN_IDS = [710633503, 716119785]
+GROUP_ID = -1002786428793
 
 
 def is_blocked(user_id: int) -> bool:
