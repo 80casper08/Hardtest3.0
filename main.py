@@ -1,40 +1,63 @@
+import asyncio
 import os
-import random
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from dotenv import load_dotenv
 
+# Завантажуємо токен з .env
 load_dotenv()
-
 TOKEN = os.getenv("TOKEN")
 if not TOKEN:
-    raise RuntimeError("Помилка: токен бота не знайдено. Будь ласка, додай TOKEN у файл .env")
+    raise RuntimeError("❌ Не знайдено токен! Додай його у файл .env")
 
+# Ініціалізація бота
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-sections = {
-    "👮ОП👮": [
-        {"question": "Питання 1 ОП?", "options": ["Так", "Ні"], "correct": [0]},
-        {"question": "Питання 2 ОП?", "options": ["Правильно", "Неправильно"], "correct": [1]}
+# Стан машини
+class TestStates(StatesGroup):
+    choosing_section = State()
+    in_test = State()
+
+# Глобальна змінна для збереження обраного розділу
+user_section = {}
+
+# Меню
+menu_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Оп"), KeyboardButton(text="ХардТест")],
+        [KeyboardButton(text="Загальні"), KeyboardButton(text="Лін")]
     ],
-    "🎭Загальні🎭": [
-        {"question": "Загальне питання 1?", "options": ["А", "Б"], "correct": [0]}
-    ],
-}
+    resize_keyboard=True
+)
 
-hard_questions = [
-    {"question": "Хард тест питання 1?", "options": ["В1", "В2"], "correct": [1]}
-]
+@dp.message(F.text.in_({"Оп", "ХардТест", "Загальні", "Лін"}))
+async def start_quiz(message: types.Message, state: FSMContext):
+    section = message.text
+    await state.set_state(TestStates.in_test)
+    user_section[message.from_user.id] = section
+    await message.answer(f"Починаємо тест '{section}'! ❗ Інші розділи тимчасово недоступні.")
+    # Тут має бути логіка тестування…
 
-class QuizState(StatesGroup):
-    category = State()
-    question_index = State()
-    selected_options = State()
+@dp.message(TestStates.in_test)
+async def handle_during_test(message: types.Message, state: FSMContext):
+    await message.answer("🛑 Завершіть тест, перш ніж переходити до інших дій.")
 
-class HardTestState(StatesGroup):
+@dp.message(TestStates.choosing_section)
+async def choose_section(message: types.Message, state: FSMContext):
+    await message.answer("Обери розділ:", reply_markup=menu_keyboard)
+
+@dp.message()
+async def default(message: types.Message, state: FSMContext):
+    await state.set_state(TestStates.choosing_section)
+    await message.answer("Привіт! Обери розділ тесту:", reply_markup=menu_keyboard)
+
+# Запуск
+if __name__ == "__main__":
+    asyncio.run(dp.start_polling(bot))class HardTestState(StatesGroup):
     question_index = State()
     selected_options = State()
 
