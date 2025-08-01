@@ -1,67 +1,121 @@
 import asyncio
+import random
 import os
 from aiogram import Bot, Dispatcher, types, F
-from aiogram.fsm.context import FSMContext
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from dotenv import load_dotenv
 
-# Завантажуємо токен з .env
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-if not TOKEN:
-    raise RuntimeError("❌ Не знайдено токен! Додай його у файл .env")
 
-# Ініціалізація бота
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-# Стан машини
-class TestStates(StatesGroup):
+# Стани FSM
+class TestState(StatesGroup):
     choosing_section = State()
-    in_test = State()
+    in_quiz = State()
 
-# Глобальна змінна для збереження обраного розділу
-user_section = {}
+# Розділи і запитання
+sections = {
+    "Оп": [{"question": "Питання 1 Оп?", "options": ["A", "B", "C"], "answer": "B"}],
+    "ХардТест": [{"question": "Питання 1 Хард?", "options": ["X", "Y", "Z"], "answer": "Z"}],
+    "Загальні": [{"question": "Що таке ОП?", "options": ["Опера", "Охорона праці", "Опція"], "answer": "Охорона праці"}],
+    "Лін": [{"question": "Lean означає?", "options": ["Жир", "Тощий", "Раціональний"], "answer": "Раціональний"}]
+}
 
-# Меню
-menu_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="Оп"), KeyboardButton(text="ХардТест")],
-        [KeyboardButton(text="Загальні"), KeyboardButton(text="Лін")]
-    ],
-    resize_keyboard=True
-)
+# Кнопки меню
+def main_menu():
+    buttons = [
+        [types.KeyboardButton(text="Оп")],
+        [types.KeyboardButton(text="ХардТест")],
+        [types.KeyboardButton(text="Загальні")],
+        [types.KeyboardButton(text="Лін")]
+    ]
+    return types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
 
-@dp.message(F.text.in_({"Оп", "ХардТест", "Загальні", "Лін"}))
-async def start_quiz(message: types.Message, state: FSMContext):
+# Обробка /start
+@dp.message(F.text == "/start")
+async def cmd_start(message: types.Message, state: FSMContext):
+    await state.clear()
+    await state.set_state(TestState.choosing_section)
+    await message.answer("Вибери розділ для тесту:", reply_markup=main_menu())
+
+# Вибір розділу
+@dp.message(TestState.choosing_section, F.text.in_(sections.keys()))
+async def section_chosen(message: types.Message, state: FSMContext):
     section = message.text
-    await state.set_state(TestStates.in_test)
-    user_section[message.from_user.id] = section
-    await message.answer(f"Починаємо тест '{section}'! ❗ Інші розділи тимчасово недоступні.")
-    # Тут має бути логіка тестування…
+    await state.update_data(section=section, current=0, correct=0)
+    await state.set_state(TestState.in_quiz)
+    await send_question(message.chat.id, section, 0, state)
 
-@dp.message(TestStates.in_test)
-async def handle_during_test(message: types.Message, state: FSMContext):
-    await message.answer("🛑 Завершіть тест, перш ніж переходити до інших дій.")
+# Відповідь на питання
+@dp.callback_query(TestState.in_quiz)
+async def answer_callback(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    section = data["section"]
+    current = data["current"]
+    correct = data["correct"]
+    selected = callback.data
 
-@dp.message(TestStates.choosing_section)
-async def choose_section(message: types.Message, state: FSMContext):
-    await message.answer("Обери розділ:", reply_markup=menu_keyboard)
+    question_data = sections[section][current]
+    correct_answer = question_data["answer"]
 
-@dp.message()
-async def default(message: types.Message, state: FSMContext):
-    await state.set_state(TestStates.choosing_section)
-    await message.answer("Привіт! Обери розділ тесту:", reply_markup=menu_keyboard)
+    if selected == correct_answer:
+        correct += 1
 
-# Запуск
+    current += 1
+
+    if current < len(sections[section]):
+        await state.update_data(current=current, correct=correct)
+        await send_question(callback.message.chat.id, section, current, state)
+    else:
+        await callback.message.answer(f"Тест завершено. Правильних відповідей: {correct} з {len(sections[section])}")
+        await callback.message.answer("Пройти ще раз той самий тест?", reply_markup=again_keyboard())
+        await state.set_state(TestState.choosing_section)
+
+    await callback.answer()
+
+# Кнопка "пройти ще раз"
+def again_keyboard():
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Пройти ще раз", callback_data="again")]
+    ])
+    return kb
+
+@dp.callback_query(F.data == "again")
+async def repeat_test(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    section = data.get("section")
+    if not section:
+        await callback.message.answer("Помилка: не знайдено розділ.")
+        return
+    await state.update_data(current=0, correct=0)
+    await state.set_state(TestState.in_quiz)
+    await send_question(callback.message.chat.id, section, 0, state)
+    await callback.answer()
+
+# Надіслати запитання
+async def send_question(chat_id, section, index, state: FSMContext):
+    question_data = sections[section][index]
+    text = f"{index + 1}) {question_data['question']}"
+    buttons = [
+        [InlineKeyboardButton(text=opt, callback_data=opt)]
+        for opt in question_data["options"]
+    ]
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_message(chat_id, text, reply_markup=markup)
+
+# Запуск бота
+async def main():
+    print("Бот запущено!")
+    await dp.start_polling(bot)
+
 if __name__ == "__main__":
-    asyncio.run(dp.start_polling(bot))class HardTestState(StatesGroup):
-    question_index = State()
-    selected_options = State()
-
-def main_keyboard():
+    asyncio.run(main())def main_keyboard():
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
     return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
