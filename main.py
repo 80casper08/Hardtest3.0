@@ -19,7 +19,7 @@ class TestState(StatesGroup):
     choosing_section = State()
     in_quiz = State()
 
-# Розділи і запитання
+# Тестові питання
 sections = {
     "Оп": [{"question": "Питання 1 Оп?", "options": ["A", "B", "C"], "answer": "B"}],
     "ХардТест": [{"question": "Питання 1 Хард?", "options": ["X", "Y", "Z"], "answer": "Z"}],
@@ -27,17 +27,19 @@ sections = {
     "Лін": [{"question": "Lean означає?", "options": ["Жир", "Тощий", "Раціональний"], "answer": "Раціональний"}]
 }
 
-# Кнопки меню
+# Меню вибору розділів
 def main_menu():
-    buttons = [
-        [types.KeyboardButton(text="Оп")],
-        [types.KeyboardButton(text="ХардТест")],
-        [types.KeyboardButton(text="Загальні")],
-        [types.KeyboardButton(text="Лін")]
-    ]
-    return types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True)
+    return types.ReplyKeyboardMarkup(
+        keyboard=[
+            [types.KeyboardButton(text="Оп")],
+            [types.KeyboardButton(text="ХардТест")],
+            [types.KeyboardButton(text="Загальні")],
+            [types.KeyboardButton(text="Лін")]
+        ],
+        resize_keyboard=True
+    )
 
-# Обробка /start
+# /start
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message, state: FSMContext):
     await state.clear()
@@ -52,16 +54,68 @@ async def section_chosen(message: types.Message, state: FSMContext):
     await state.set_state(TestState.in_quiz)
     await send_question(message.chat.id, section, 0)
 
+# Надсилання питання
+async def send_question(chat_id, section, index):
+    question_data = sections[section][index]
+    text = f"{index + 1}) {question_data['question']}"
+    buttons = [
+        [InlineKeyboardButton(text=opt, callback_data=opt)]
+        for opt in question_data["options"]
+    ]
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await bot.send_message(chat_id, text, reply_markup=markup)
+
 # Відповідь на питання
 @dp.callback_query(TestState.in_quiz)
-async def answer_callback(callback: types.CallbackQuery, state: FSMContext):
+async def handle_answer(callback: types.CallbackQuery, state: FSMContext):
     data = await state.get_data()
     section = data["section"]
     current = data["current"]
     correct = data["correct"]
     selected = callback.data
 
-    question_data = sections[section][current]
+    correct_answer = sections[section][current]["answer"]
+    if selected == correct_answer:
+        correct += 1
+    current += 1
+
+    if current < len(sections[section]):
+        await state.update_data(current=current, correct=correct)
+        await send_question(callback.message.chat.id, section, current)
+    else:
+        await callback.message.answer(f"Тест завершено. Правильних відповідей: {correct} з {len(sections[section])}")
+        await callback.message.answer("Пройти ще раз той самий тест?", reply_markup=again_keyboard())
+        await state.set_state(TestState.choosing_section)
+
+    await callback.answer()
+
+# Кнопка "Пройти ще раз"
+def again_keyboard():
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="Пройти ще раз", callback_data="again")]
+        ]
+    )
+
+@dp.callback_query(F.data == "again")
+async def repeat_test(callback: types.CallbackQuery, state: FSMContext):
+    data = await state.get_data()
+    section = data.get("section")
+    if section:
+        await state.update_data(current=0, correct=0)
+        await state.set_state(TestState.in_quiz)
+        await send_question(callback.message.chat.id, section, 0)
+    else:
+        await callback.message.answer("Помилка: розділ не знайдено.")
+    await callback.answer()
+
+# Запуск бота
+async def main():
+    print("Бот запущено!")
+    await dp.start_polling(bot)
+
+if __name__ == "__main__":
+    asyncio.run(main())    question_data = sections[section][current]
     correct_answer = question_data["answer"]
 
     if selected == correct_answer:
