@@ -1,11 +1,16 @@
+import os
+import random
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
-import random
-import asyncio
+from dotenv import load_dotenv
 
-TOKEN = "ВАШ_ТОКЕН"
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
+if not TOKEN:
+    raise RuntimeError("Помилка: токен бота не знайдено. Будь ласка, додай TOKEN у файл .env")
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
@@ -33,8 +38,121 @@ class HardTestState(StatesGroup):
     question_index = State()
     selected_options = State()
 
+def main_keyboard():
+    buttons = [types.KeyboardButton(text=section) for section in sections]
+    buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
+    return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
+
+@dp.message(F.text == "/start")
+async def cmd_start(message: types.Message, state: FSMContext):
+    await state.clear()
+    await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard())
+
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    if data.get("active_test"):
+        await message.answer(f"❗ Ви вже проходите тест у розділі: {data['active_test']}. Завершіть його, будь ласка.")
+        return
+
+    category = message.text
+    questions = sections[category]
+
+    await state.set_state(QuizState.category)
+    await state.update_data(category=category, question_index=0, selected_options=[], questions=questions, active_test=category)
+
+    await message.answer(f"🔒 Почато розділ: {category}", reply_markup=types.ReplyKeyboardRemove())
+    await send_question(message, state)
+
+@dp.message(F.text == "👀Hard Test👀")
+async def start_hard_test(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    if data.get("active_test"):
+        await message.answer(f"❗ Ви вже проходите тест у розділі: {data['active_test']}. Завершіть його, будь ласка.")
+        return
+
+    shuffled_questions = hard_questions.copy()
+    random.shuffle(shuffled_questions)
+
+    await state.set_state(HardTestState.question_index)
+    await state.update_data(
+        question_index=0,
+        selected_options=[],
+        questions=shuffled_questions,
+        active_test="👀Hard Test👀"
+    )
+
+    await message.answer("🔒 Почато розділ: Hard Test", reply_markup=types.ReplyKeyboardRemove())
+    await send_hard_question(message, state)
+
+async def send_question(message_or_callback, state: FSMContext):
+    data = await state.get_data()
+    questions = data.get("questions")
+    index = data.get("question_index", 0)
+
+    if index >= len(questions):
+        await message_or_callback.answer("Тест завершено!", reply_markup=main_keyboard())
+        await state.update_data(active_test=None)
+        await state.clear()
+        return
+
+    q = questions[index]
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for i, opt in enumerate(q["options"]):
+        keyboard.add(types.InlineKeyboardButton(text=opt, callback_data=f"ans_{i}"))
+
+    await message_or_callback.answer(q["question"], reply_markup=keyboard)
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("ans_"))
+async def process_answer(callback: types.CallbackQuery, state: FSMContext):
+    selected = int(callback.data.split("_")[1])
+    data = await state.get_data()
+    questions = data.get("questions")
+    index = data.get("question_index", 0)
+
+    q = questions[index]
+    # Можна тут зберегти чи перевірити правильність, якщо потрібно
+
+    index += 1
+    await state.update_data(question_index=index)
+
+    await callback.answer()  # Прибирає "годинку" в Telegram
+
+    await send_question(callback.message, state)
+
+async def send_hard_question(message_or_callback, state: FSMContext):
+    data = await state.get_data()
+    questions = data.get("questions")
+    index = data.get("question_index", 0)
+
+    if index >= len(questions):
+        await message_or_callback.answer("Hard Test завершено!", reply_markup=main_keyboard())
+        await state.update_data(active_test=None)
+        await state.clear()
+        return
+
+    q = questions[index]
+    keyboard = types.InlineKeyboardMarkup(row_width=1)
+    for i, opt in enumerate(q["options"]):
+        keyboard.add(types.InlineKeyboardButton(text=opt, callback_data=f"hard_ans_{i}"))
+
+    await message_or_callback.answer(q["question"], reply_markup=keyboard)
+
+@dp.callback_query(lambda c: c.data and c.data.startswith("hard_ans_"))
+async def process_hard_answer(callback: types.CallbackQuery, state: FSMContext):
+    selected = int(callback.data.split("_")[2])
+    data = await state.get_data()
+    index = data.get("question_index", 0)
+    index += 1
+    await state.update_data(question_index=index)
+
+    await callback.answer()
+
+    await send_hard_question(callback.message, state)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(dp.start_polling(bot))async def start_quiz(message: types.Message, state: FSMContext):
     data = await state.get_data()
     if data.get("active_test"):
         await message.answer(f"❗ Ви вже проходите тест у розділі: {data['active_test']}. Завершіть його, будь ласка.")
