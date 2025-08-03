@@ -222,7 +222,9 @@ async def send_question(message_or_callback, state: FSMContext):
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
     if isinstance(message_or_callback, CallbackQuery):
-        await state.update_data(wrong_answers=wrongs, current_section=None, restart_used=False)
+        await state.update_data(wrong_answers=wrongs)
+        await state.update_data(current_section=None)
+        await state.update_data(restart_used=False)
 
 @dp.callback_query(F.data == "confirm")
 async def confirm_answer(callback: CallbackQuery, state: FSMContext):
