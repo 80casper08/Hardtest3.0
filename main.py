@@ -109,7 +109,7 @@ def main_keyboard(user_id=None):
 
 
 @dp.message(F.text == "/start")
-async def cmd_start(message: types.Message):
+async def cmd_start(message: types.Message, state: FSMContext):
     user = message.from_user
     user_id = user.id
 
@@ -119,6 +119,9 @@ async def cmd_start(message: types.Message):
 
     full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
+
+    # Скидання стану та розблокування повторного проходження
+    await state.clear()
 
     # Логування
     with open("logs.txt", "a", encoding="utf-8") as f:
