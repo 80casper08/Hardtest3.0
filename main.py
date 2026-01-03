@@ -236,17 +236,11 @@ async def send_question(message_or_callback, state: FSMContext):
     random.shuffle(options)
     selected = data.get("temp_selected", set())
 
-    # ✅ Розбиваємо текст кожної відповіді на рядки і робимо стовпчик
+    # ✅ Весь текст відповіді в одній кнопці, перенос рядка через split_button_text
     buttons = []
     for i, (label, _) in options:
-        split_lines = split_button_text(label).split("\n")
-        # Кожний рядок — окрема кнопка, додаємо "✅" лише до першого рядка
-        row = []
-        for j, line in enumerate(split_lines):
-            prefix = "✅ " if i in selected and j == 0 else ("◻️ " if j == 0 else "")
-            row.append(InlineKeyboardButton(text=prefix + line, callback_data=f"opt_{i}"))
-        for btn in row:
-            buttons.append([btn])  # додаємо кожну кнопку в свій рядок
+        button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
+        buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
 
     # Додаємо кнопку підтвердження
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
@@ -256,6 +250,7 @@ async def send_question(message_or_callback, state: FSMContext):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
         await message_or_callback.answer(text, reply_markup=keyboard)
+
 
 @dp.callback_query(F.data == "confirm")
 async def confirm_answer(callback: CallbackQuery, state: FSMContext):
@@ -357,19 +352,13 @@ async def send_hard_question(chat_id, state: FSMContext):
     await state.update_data(current_options=options, temp_selected=set())
     selected = set()  # спочатку нічого не вибрано
 
-    # ✅ Розбиваємо текст кожної відповіді на рядки та формуємо InlineKeyboard
+    # ✅ Формуємо кнопки: весь текст відповіді в одній кнопці з \n
     buttons = []
     for i, (opt_text, _) in options:
-        split_lines = split_button_text(opt_text).split("\n")
-        row = []
-        for j, line in enumerate(split_lines):
-            prefix = "✅ " if i in selected and j == 0 else ("◻️ " if j == 0 else "")
-            row.append(InlineKeyboardButton(text=prefix + line, callback_data=f"hard_opt_{i}"))
-        # Кожний рядок відповіді додаємо окремим рядком у клавіатуру
-        for btn in row:
-            buttons.append([btn])
+        button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(opt_text)
+        buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"hard_opt_{i}")])
 
-    # Кнопка підтвердження
+    # Додаємо кнопку підтвердження
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -397,7 +386,6 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
 
     await state.update_data(current_message_id=msg.message_id)
-
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
