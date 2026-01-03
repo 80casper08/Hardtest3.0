@@ -34,20 +34,32 @@ GROUP_ID = -1002786428793
 PING_INTERVAL = 6 * 60 * 60 
 
 def split_button_text(text: str, max_len: int = 24) -> str:
-    if len(text) <= max_len:
+    """
+    Розбиває текст на кілька рядків для кнопки.
+    Не рве слова, кожен рядок ≤ max_len символів.
+    """
+    words = text.split()
+    if not words:
         return text
 
-    words = text.split()
-    first = ""
-    second = ""
+    lines = []
+    current_line = ""
 
     for word in words:
-        if len(first) + len(word) + 1 <= max_len:
-            first += (" " if first else "") + word
+        # Якщо додавання слова не перевищує max_len, додаємо його до поточного рядка
+        if len(current_line) + len(word) + (1 if current_line else 0) <= max_len:
+            current_line += (" " if current_line else "") + word
         else:
-            second += (" " if second else "") + word
+            # Інакше — зберігаємо поточний рядок і починаємо новий
+            lines.append(current_line)
+            current_line = word
 
-    return f"{first}\n{second}"
+    # Додаємо останній рядок
+    if current_line:
+        lines.append(current_line)
+
+    # Об'єднуємо рядки через '\n'
+    return "\n".join(lines)
 
 
 def is_blocked(user_id: int) -> bool:
@@ -172,6 +184,7 @@ async def send_question(message_or_callback, state: FSMContext):
     index = data["question_index"]
 
     if index >= len(questions):
+        # --- завершення тесту ---
         correct = 0
         wrongs = []
         for i, q in enumerate(questions):
@@ -216,20 +229,29 @@ async def send_question(message_or_callback, state: FSMContext):
             await message_or_callback.answer(result, reply_markup=keyboard, parse_mode="Markdown")
         return
 
+    # --- відправка питання ---
     question = questions[index]
     text = question["text"]
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     selected = data.get("temp_selected", set())
-    buttons = [[
-    InlineKeyboardButton(
-        text=("✅ " if i in selected else "◻️ ") + split_button_text(label),
-        callback_data=f"opt_{i}"
-    )
-] for i, (label, _) in options]
 
+    # ✅ Розбиваємо текст кожної відповіді на рядки і робимо стовпчик
+    buttons = []
+    for i, (label, _) in options:
+        split_lines = split_button_text(label).split("\n")
+        # Кожний рядок — окрема кнопка, додаємо "✅" лише до першого рядка
+        row = []
+        for j, line in enumerate(split_lines):
+            prefix = "✅ " if i in selected and j == 0 else ("◻️ " if j == 0 else "")
+            row.append(InlineKeyboardButton(text=prefix + line, callback_data=f"opt_{i}"))
+        for btn in row:
+            buttons.append([btn])  # додаємо кожну кнопку в свій рядок
+
+    # Додаємо кнопку підтвердження
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
@@ -296,33 +318,13 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 
 # ---------- HARD TEST ----------
 @dp.message(F.text == "👀Hard Test👀")
-async def start_hard_test(message: types.Message, state: FSMContext):
-    user_id = message.from_user.id
-    if is_blocked(user_id):
-        await message.answer("🚫Бот тимчасово непрацює🔐")
-        return
-
-    log_result(message.from_user, "👀Hard Test👀", started=True)
-    await state.clear()
-    await state.set_state(HardTestState.question_index)
-
-    shuffled_questions = hard_questions.copy()
-    random.shuffle(shuffled_questions)
-
-    await state.update_data(
-        question_index=0,
-        selected_options=[],
-        temp_selected=set(),
-        questions=shuffled_questions
-    )
-    await send_hard_question(message.chat.id, state)
-
-
 async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
     questions = data["questions"]
+
     if index >= len(questions):
+        # --- завершення Hard Test ---
         selected_all = data.get("selected_options", [])
         correct = 0
         for i, q in enumerate(questions):
@@ -348,21 +350,30 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
         return
 
+    # --- відправка питання ---
     question = questions[index]
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
+    selected = set()  # спочатку нічого не вибрано
 
-    buttons = [[
-        InlineKeyboardButton(
-            text="◻️ " + split_button_text(opt_text),
+    # ✅ Розбиваємо текст кожної відповіді на рядки та формуємо InlineKeyboard
+    buttons = []
+    for i, (opt_text, _) in options:
+        split_lines = split_button_text(opt_text).split("\n")
+        row = []
+        for j, line in enumerate(split_lines):
+            prefix = "✅ " if i in selected and j == 0 else ("◻️ " if j == 0 else "")
+            row.append(InlineKeyboardButton(text=prefix + line, callback_data=f"hard_opt_{i}"))
+        # Кожний рядок відповіді додаємо окремим рядком у клавіатуру
+        for btn in row:
+            buttons.append([btn])
 
-            callback_data=f"hard_opt_{i}"
-        )
-    ] for i, (opt_text, _) in options]
+    # Кнопка підтвердження
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
+    # Видаляємо попереднє повідомлення з питанням (якщо є)
     previous_id = data.get("current_message_id")
     if previous_id:
         try:
@@ -370,7 +381,7 @@ async def send_hard_question(chat_id, state: FSMContext):
         except:
             pass
 
-    # 👇 тут головне — перевіряємо наявність фото
+    # Відправка питання з фото або без
     if "image" in question and question["image"]:
         msg = await bot.send_photo(
             chat_id,
@@ -386,6 +397,7 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
 
     await state.update_data(current_message_id=msg.message_id)
+
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
