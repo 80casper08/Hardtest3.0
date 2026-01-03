@@ -187,7 +187,6 @@ async def start_quiz(message: types.Message, state: FSMContext):
     await state.set_state(QuizState.category)
     await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
     await send_question(message, state)
-
 async def send_question(message_or_callback, state: FSMContext):
     data = await state.get_data()
     questions = data["questions"]
@@ -246,22 +245,22 @@ async def send_question(message_or_callback, state: FSMContext):
     random.shuffle(options)
     selected = data.get("temp_selected", set())
 
-    # ✅ Весь текст відповіді в одній кнопці, з центруванням
-   buttons = []
+    # --- Формування кнопок: одна кнопка на рядок ---
+    buttons = []
     for i, (label, _) in options:
-    button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
-    # Кожна кнопка в окремому рядку → буде широка
-    buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
+        button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
+        buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
 
-# Кнопка підтвердження
-buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
-keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+    # Кнопка підтвердження
+    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-
+    # Відправка або редагування
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
     else:
         await message_or_callback.answer(text, reply_markup=keyboard)
+
 
 
 @dp.callback_query(F.data == "confirm")
