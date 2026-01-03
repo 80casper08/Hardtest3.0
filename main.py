@@ -248,7 +248,7 @@ async def send_question(message_or_callback, state: FSMContext):
 
     # ✅ Весь текст відповіді в одній кнопці, з центруванням
    buttons = []
-for i, (label, _) in options:
+    for i, (label, _) in options:
     button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
     # Кожна кнопка в окремому рядку → буде широка
     buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
