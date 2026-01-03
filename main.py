@@ -247,14 +247,16 @@ async def send_question(message_or_callback, state: FSMContext):
     selected = data.get("temp_selected", set())
 
     # ✅ Весь текст відповіді в одній кнопці, з центруванням
-    buttons = []
-    for i, (label, _) in options:
-        button_text = ("✅ " if i in selected else "◻️ ") + center_text(split_button_text(label))
-        buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
+   buttons = []
+for i, (label, _) in options:
+    button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
+    # Кожна кнопка в окремому рядку → буде широка
+    buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
 
-    # Кнопка підтвердження
-    buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
-    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+# Кнопка підтвердження
+buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
+keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
 
     if isinstance(message_or_callback, CallbackQuery):
         await message_or_callback.message.edit_text(text, reply_markup=keyboard)
