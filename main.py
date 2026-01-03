@@ -12,6 +12,16 @@ from dotenv import load_dotenv
 from questions import op_questions, general_questions, lean_questions, qr_questions
 from hard_questions import questions as hard_questions
 
+
+def center_text(text: str, width: int = 24) -> str:
+    """Додає пробіли спереду, щоб текст приблизно був по центру кнопки."""
+    lines = text.split("\n")
+    centered = []
+    for line in lines:
+        padding = max(0, (width - len(line)) // 2)
+        centered.append(" " * padding + line)
+    return "\n".join(centered)
+
 app = Flask(__name__)
 
 @app.route("/")
@@ -236,13 +246,13 @@ async def send_question(message_or_callback, state: FSMContext):
     random.shuffle(options)
     selected = data.get("temp_selected", set())
 
-    # ✅ Весь текст відповіді в одній кнопці, перенос рядка через split_button_text
+    # ✅ Весь текст відповіді в одній кнопці, з центруванням
     buttons = []
     for i, (label, _) in options:
-        button_text = ("✅ " if i in selected else "◻️ ") + split_button_text(label)
+        button_text = ("✅ " if i in selected else "◻️ ") + center_text(split_button_text(label))
         buttons.append([InlineKeyboardButton(text=button_text, callback_data=f"opt_{i}")])
 
-    # Додаємо кнопку підтвердження
+    # Кнопка підтвердження
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
