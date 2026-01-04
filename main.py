@@ -202,7 +202,7 @@ async def send_question(message_or_callback, state: FSMContext):
 
     question = questions[index]
     total = len(questions)
-    text = f"{index + 1}/{total}\n\n{question['text']}"
+    text = f"📌 {index + 1}/{total}\n\n{question['text']}"
     options = list(enumerate(question["options"]))
     random.shuffle(options)
 
@@ -333,8 +333,7 @@ async def send_hard_question(chat_id, state: FSMContext):
     # Поточне питання
     question = questions[index]
     total = len(questions)
-    text = f"{index + 1}/{total}\n\n{question['text']}"
-
+    text = f"📌 {index + 1}/{total}\n\n{question['text']}"
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
