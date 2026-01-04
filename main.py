@@ -353,22 +353,22 @@ async def send_hard_question(chat_id, state: FSMContext):
             pass
 
     # 👇 тут головне — перевіряємо наявність фото
-    if "image" in question and question["image"]:
-    msg = await bot.send_photo(
-        chat_id,
-        photo=question["image"],
-        caption=text,
-        reply_markup=keyboard
-    )
-else:
-    msg = await bot.send_message(
-        chat_id,
-        text=text,
-        reply_markup=keyboard
-    )
-
-
-    await state.update_data(current_message_id=msg.message_id)
+        if "image" in question and question["image"]:
+        msg = await bot.send_photo(
+            chat_id,
+            photo=question["image"],
+            caption=text,
+            reply_markup=keyboard
+        )
+    else:
+        msg = await bot.send_message(
+            chat_id,
+            text=text,
+            reply_markup=keyboard
+        )
+    
+    
+        await state.update_data(current_message_id=msg.message_id)
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
