@@ -302,7 +302,9 @@ async def send_hard_question(chat_id, state: FSMContext):
     data = await state.get_data()
     index = data["question_index"]
     questions = data["questions"]
+
     if index >= len(questions):
+        # Кінець тесту
         selected_all = data.get("selected_options", [])
         correct = 0
         for i, q in enumerate(questions):
@@ -328,13 +330,14 @@ async def send_hard_question(chat_id, state: FSMContext):
         )
         return
 
+    # Поточне питання
     question = questions[index]
     total = len(questions)
     text = f"{index + 1}/{total}\n\n{question['text']}"
+
     options = list(enumerate(question["options"]))
     random.shuffle(options)
     await state.update_data(current_options=options, temp_selected=set())
-
 
     buttons = [[
         InlineKeyboardButton(
@@ -345,6 +348,7 @@ async def send_hard_question(chat_id, state: FSMContext):
     buttons.append([InlineKeyboardButton(text="✅ Підтвердити", callback_data="hard_confirm")])
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
+    # Видаляємо попереднє повідомлення
     previous_id = data.get("current_message_id")
     if previous_id:
         try:
@@ -352,8 +356,8 @@ async def send_hard_question(chat_id, state: FSMContext):
         except:
             pass
 
-    # 👇 тут головне — перевіряємо наявність фото
-        if "image" in question and question["image"]:
+    # Відправляємо питання (з фото або без)
+    if "image" in question and question["image"]:
         msg = await bot.send_photo(
             chat_id,
             photo=question["image"],
@@ -366,9 +370,10 @@ async def send_hard_question(chat_id, state: FSMContext):
             text=text,
             reply_markup=keyboard
         )
-    
-    
-        await state.update_data(current_message_id=msg.message_id)
+
+    # Зберігаємо id поточного повідомлення
+    await state.update_data(current_message_id=msg.message_id)
+
 
 @dp.callback_query(F.data.startswith("hard_opt_"))
 async def toggle_hard_option(callback: CallbackQuery, state: FSMContext):
