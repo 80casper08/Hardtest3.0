@@ -1164,7 +1164,7 @@ qr_questions += [
         "text": "Який правильний QR-код для StreetSiren?",
         "options": [
             ("SS – b 062 w 061", False),
-            ("SS – b 142 w 141", False),
+            ("SS – w 142 b 141", False),
             ("SS – b 642 w 641", False),
             ("SS – w 141 b 142", True),
         ]
@@ -1405,15 +1405,6 @@ qr_questions += [
             ("HB2 – b 1071 w 1072", False),
             ("HB2 – b 1600 w 2600", False),
             ("HB2 – w 1a00 b 2a00", True),
-        ]
-    },
-    {
-        "text": "Який правильний QR-код для StreetSiren?",
-        "options": [
-            ("SS – w 141 b 142", True),
-            ("SS – b 0c1 w 0c2", False),
-            ("SS – b 421 w 422", False),
-            ("SS – b 1e1 w 1e2", False),
         ]
     },
 ]
