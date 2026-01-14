@@ -128,16 +128,21 @@ async def cmd_start(message: types.Message):
     with open("logs.txt", "a", encoding="utf-8") as f:
         f.write(f"{full_name} | {username} | {user_id} | Натиснув /start\n")
 
-    # Повідомлення адміну
     # 🔕 Адмін не отримує повідомлення про самого себе
-if user_id not in ADMIN_IDS:
-    for admin_id in ADMIN_IDS:
-        await bot.send_message(
-            admin_id,
-            f"🚀 /start натиснув користувач:\n👤 {full_name} ({username})\n🆔 ID: {user_id}"
-        )
+    if user_id not in ADMIN_IDS:
+        for admin_id in ADMIN_IDS:
+            await bot.send_message(
+                admin_id,
+                f"🚀 /start натиснув користувач:\n"
+                f"👤 {full_name} ({username})\n"
+                f"🆔 ID: {user_id}"
+            )
 
-await message.answer("Вибери розділ для тесту:", reply_markup=main_keyboard(user_id))
+    await message.answer(
+        "Вибери розділ для тесту:",
+        reply_markup=main_keyboard(user_id)
+    )
+
 
 
 @dp.message(F.text.in_(sections.keys()))
