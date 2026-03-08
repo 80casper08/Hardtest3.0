@@ -79,7 +79,16 @@ def remove_pending(user_id: int):
         for line in lines:
             if not line.startswith(str(user_id) + "|"):
                 f.write(line + "\n")
-
+# ----- Перевірка доступу -----
+def has_access(user_id: int) -> bool:
+    """Перевіряє, чи користувач дозволений (approved)"""
+    if is_blocked(user_id):
+        return False
+    if not os.path.exists("approved.txt"):
+        return False
+    with open("approved.txt", "r", encoding="utf-8") as f:
+        approved = f.read().splitlines()
+    return str(user_id) in approved
 
 # Запис користувача у users.txt без дублікатів
 def save_user_if_new(user: types.User, section: str):
@@ -205,16 +214,27 @@ async def cmd_start(message: types.Message):
 @dp.message(F.text.in_(sections.keys()))
 async def start_quiz(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
+
+    # Перевіряємо доступ
+    if not has_access(user_id):
+        await message.answer("❌ У вас немає доступу до цього тесту.")
+        return
+
     if is_blocked(user_id):
         await message.answer("🚫Бот тимчасово непрацює🔐")
         return
 
     category = message.text
-
     questions = sections[category]
     log_result(message.from_user, category, started=True)
     await state.set_state(QuizState.category)
-    await state.update_data(category=category, question_index=0, selected_options=[], wrong_answers=[], questions=questions)
+    await state.update_data(
+        category=category,
+        question_index=0,
+        selected_options=[],
+        wrong_answers=[],
+        questions=questions
+    )
     await send_question(message, state)
 
 async def send_question(message_or_callback, state: FSMContext):
@@ -345,6 +365,12 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 @dp.message(F.text == "👀Hard Test👀")
 async def start_hard_test(message: types.Message, state: FSMContext):
     user_id = message.from_user.id
+
+    # 🔒 Перевірка доступу
+    if not has_access(user_id):
+        await message.answer("❌ У вас немає доступу до Hard Test.")
+        return
+
     if is_blocked(user_id):
         await message.answer("🚫Бот тимчасово непрацює🔐")
         return
