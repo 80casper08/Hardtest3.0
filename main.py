@@ -168,10 +168,12 @@ async def cmd_start(message: types.Message):
     full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
 
+    # 🔒 якщо користувач заблокований — нічого не показуємо
     if is_blocked(user_id):
-        return  # нічого не показуємо
+        await message.answer("🚫Бот тимчасово не працює🔐")
+        return
 
-    # логування
+    # логування натискання /start
     with open("logs.txt", "a", encoding="utf-8") as f:
         f.write(f"{full_name} | {username} | {user_id} | Натиснув /start\n")
 
@@ -179,20 +181,23 @@ async def cmd_start(message: types.Message):
     if not os.path.exists("approved.txt"):
         open("approved.txt", "w").close()
 
-    # читаємо approved.txt
+    # читаємо список дозволених користувачів
     with open("approved.txt", "r", encoding="utf-8") as f:
         approved = f.read().splitlines()
 
     # якщо користувач не дозволений
     if user_id not in approved:
         if not is_pending(user_id):
-            add_pending(user_id, full_name, username)  # <-- змінено
+            add_pending(user_id, full_name, username)  # додаємо в pending
+
+            # кнопки для підтвердження адміну
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="✅ Дозволити", callback_data=f"approve_{user_id}")],
                     [InlineKeyboardButton(text="❌ Заборонити", callback_data=f"deny_{user_id}")]
                 ]
             )
+
             for admin_id in ADMIN_IDS:
                 await bot.send_message(
                     admin_id,
@@ -204,10 +209,10 @@ async def cmd_start(message: types.Message):
                 )
         return  # користувачу нічого не показуємо
 
-    # якщо дозволений, показуємо меню
+    # якщо користувач дозволений — показуємо меню
     await message.answer(
         "Вибери розділ для тесту:",
-        reply_markup=main_keyboard(user_id)
+        reply_markup=main_keyboard(user_id)  # тут main_keyboard враховує чи адмін
     )
 
 
@@ -661,9 +666,10 @@ async def ask_unblock_user(callback: CallbackQuery):
 async def approve_user(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
+
     user_id = callback.data.split("_")[1]
 
-    # Додаємо до approved.txt
+    # Додаємо користувача в approved.txt
     if not os.path.exists("approved.txt"):
         open("approved.txt", "w").close()
     with open("approved.txt", "r", encoding="utf-8") as f:
@@ -675,20 +681,21 @@ async def approve_user(callback: CallbackQuery):
     # Видаляємо pending
     remove_pending(user_id)
 
-    # Видаляємо кнопки адміну
+    # Прибираємо кнопки у повідомленні адміну
     await callback.message.edit_reply_markup()
+
+    # Підтвердження адміну
     await callback.answer("✅ Користувача дозволено", show_alert=True)
 
     # 🔹 Надсилаємо меню користувачу одразу
     try:
         user_id_int = int(user_id)
         keyboard = main_keyboard(user_id_int)
-        if keyboard:
-            await bot.send_message(
-                chat_id=user_id_int,
-                text="✅\nВиберіть розділ для тесту:",
-                reply_markup=keyboard
-            )
+        await bot.send_message(
+            chat_id=user_id_int,
+            text="Виберіть розділ для тесту:",
+            reply_markup=keyboard
+        )
     except Exception as e:
         print(f"❗ Не вдалося надіслати меню користувачу {user_id}: {e}")
 
