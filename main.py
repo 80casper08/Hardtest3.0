@@ -42,27 +42,43 @@ def is_blocked(user_id: int) -> bool:
 
 
 # ---------- Pending users ----------
-def add_pending(user_id: int):
-    with open("pending.txt", "a", encoding="utf-8") as f:
-        f.write(str(user_id) + "\n")
+def add_pending(user_id: int, full_name: str, username: str):
+    """Додає користувача в pending.txt у форматі user_id|full_name|username"""
+    entry = f"{user_id}|{full_name}|{username}"
+    if not os.path.exists("pending.txt"):
+        open("pending.txt", "w").close()
+
+    with open("pending.txt", "r", encoding="utf-8") as f:
+        lines = f.read().splitlines()
+
+    if entry not in lines:
+        with open("pending.txt", "a", encoding="utf-8") as f:
+            f.write(entry + "\n")
+
 
 def is_pending(user_id: int) -> bool:
+    """Перевіряє чи користувач в pending"""
     if not os.path.exists("pending.txt"):
         return False
     with open("pending.txt", "r", encoding="utf-8") as f:
-        return str(user_id) in f.read().splitlines()
+        for line in f.read().splitlines():
+            if line.startswith(str(user_id) + "|"):
+                return True
+    return False
+
 
 def remove_pending(user_id: int):
+    """Видаляє користувача з pending"""
     if not os.path.exists("pending.txt"):
         return
 
     with open("pending.txt", "r", encoding="utf-8") as f:
-        lines = f.readlines()
+        lines = f.read().splitlines()
 
     with open("pending.txt", "w", encoding="utf-8") as f:
         for line in lines:
-            if line.strip() != str(user_id):
-                f.write(line)
+            if not line.startswith(str(user_id) + "|"):
+                f.write(line + "\n")
 
 
 # Запис користувача у users.txt без дублікатів
@@ -139,52 +155,47 @@ def main_keyboard(user_id=None):
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
     user = message.from_user
-    user_id = user.id
-
-    if is_blocked(user_id):
-        await message.answer("🚫Бот тимчасово непрацює🔐")
-        return
-
+    user_id = str(user.id)  # важливо: str для файлів
     full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
+
+    if is_blocked(user_id):
+        return  # нічого не показуємо
 
     # логування
     with open("logs.txt", "a", encoding="utf-8") as f:
         f.write(f"{full_name} | {username} | {user_id} | Натиснув /start\n")
 
-    # створюємо файл approved якщо його нема
+    # створюємо approved.txt, якщо його нема
     if not os.path.exists("approved.txt"):
         open("approved.txt", "w").close()
 
+    # читаємо approved.txt
     with open("approved.txt", "r", encoding="utf-8") as f:
         approved = f.read().splitlines()
 
-    # якщо користувач ще не дозволений
-    if str(user_id) not in approved:
-
+    # якщо користувач не дозволений
+    if user_id not in approved:
         if not is_pending(user_id):
-
-            add_pending(user_id)
-
+            add_pending(user_id, full_name, username)  # <-- змінено
             keyboard = InlineKeyboardMarkup(
                 inline_keyboard=[
                     [InlineKeyboardButton(text="✅ Дозволити", callback_data=f"approve_{user_id}")],
                     [InlineKeyboardButton(text="❌ Заборонити", callback_data=f"deny_{user_id}")]
                 ]
             )
-
             for admin_id in ADMIN_IDS:
                 await bot.send_message(
                     admin_id,
-                    f"👤 Новий користувач\n\n"
+                    f"👤 Новий користувач очікує підтвердження:\n\n"
                     f"👤 {full_name}\n"
                     f"🔗 {username}\n"
                     f"🆔 {user_id}",
                     reply_markup=keyboard
                 )
+        return  # користувачу нічого не показуємо
 
-        return
-
+    # якщо дозволений, показуємо меню
     await message.answer(
         "Вибери розділ для тесту:",
         reply_markup=main_keyboard(user_id)
@@ -619,7 +630,40 @@ async def ask_unblock_user(callback: CallbackQuery):
     if callback.from_user.id not in ADMIN_IDS:
         return
     await callback.message.answer("Введи ID користувача, якого потрібно ✅ *розблокувати*:\n\nНапиши: `/unblockID`", parse_mode="Markdown")
+# ---------- Підтвердження користувачів ----------
+@dp.callback_query(F.data.startswith("approve_"))
+async def approve_user(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+    user_id = callback.data.split("_")[1]
 
+    # Додаємо до approved.txt
+    if not os.path.exists("approved.txt"):
+        open("approved.txt", "w").close()
+    with open("approved.txt", "r", encoding="utf-8") as f:
+        approved = f.read().splitlines()
+    if user_id not in approved:
+        with open("approved.txt", "a", encoding="utf-8") as f:
+            f.write(user_id + "\n")
+
+    remove_pending(user_id)
+    await callback.message.edit_reply_markup()  # видаляємо кнопки
+    await callback.answer("✅ Користувача дозволено", show_alert=True)
+
+
+@dp.callback_query(F.data.startswith("deny_"))
+async def deny_user(callback: CallbackQuery):
+    if callback.from_user.id not in ADMIN_IDS:
+        return
+    user_id = callback.data.split("_")[1]
+
+    if not is_blocked(user_id):
+        with open("blocked.txt", "a", encoding="utf-8") as f:
+            f.write(user_id + "\n")
+
+    remove_pending(user_id)
+    await callback.message.edit_reply_markup()  # видаляємо кнопки
+    await callback.answer("❌ Користувача заборонено", show_alert=True)
 @dp.message(F.text == "/my")
 async def my_stats(message: types.Message):
     user_id = str(message.from_user.id)
