@@ -217,7 +217,7 @@ async def start_quiz(message: types.Message, state: FSMContext):
 
     # Перевіряємо доступ
     if not has_access(user_id):
-        await message.answer("❌ У вас немає доступу до цього тесту.")
+        await message.answer("🚫Бот тимчасово непрацює🔐")
         return
 
     if is_blocked(user_id):
@@ -368,7 +368,7 @@ async def start_hard_test(message: types.Message, state: FSMContext):
 
     # 🔒 Перевірка доступу
     if not has_access(user_id):
-        await message.answer("❌ У вас немає доступу до Hard Test.")
+        await message.answer("🚫Бот тимчасово непрацює🔐")
         return
 
     if is_blocked(user_id):
@@ -672,10 +672,25 @@ async def approve_user(callback: CallbackQuery):
         with open("approved.txt", "a", encoding="utf-8") as f:
             f.write(user_id + "\n")
 
+    # Видаляємо pending
     remove_pending(user_id)
-    await callback.message.edit_reply_markup()  # видаляємо кнопки
+
+    # Видаляємо кнопки адміну
+    await callback.message.edit_reply_markup()
     await callback.answer("✅ Користувача дозволено", show_alert=True)
 
+    # 🔹 Надсилаємо меню користувачу одразу
+    try:
+        user_id_int = int(user_id)
+        keyboard = main_keyboard(user_id_int)
+        if keyboard:
+            await bot.send_message(
+                chat_id=user_id_int,
+                text="✅\nВиберіть розділ для тесту:",
+                reply_markup=keyboard
+            )
+    except Exception as e:
+        print(f"❗ Не вдалося надіслати меню користувачу {user_id}: {e}")
 
 @dp.callback_query(F.data.startswith("deny_"))
 async def deny_user(callback: CallbackQuery):
