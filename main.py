@@ -153,13 +153,24 @@ sections = {
     "🎲QR🎲": qr_questions
 }
 
-def main_keyboard(user_id=None):
+def main_keyboard(user_id: int):
+    """
+    Повертає клавіатуру для користувача.
+    Адмін бачить кнопку ℹ️ Інфо, звичайний користувач – тільки розділи та Hard Test.
+    """
+    # Базові кнопки для всіх
     buttons = [types.KeyboardButton(text=section) for section in sections]
     buttons.append(types.KeyboardButton(text="👀Hard Test👀"))
+
+    # Кнопка тільки для адмінів
     if user_id in ADMIN_IDS:
         buttons.append(types.KeyboardButton(text="ℹ️ Інфо"))
-    return types.ReplyKeyboardMarkup(keyboard=[[btn] for btn in buttons], resize_keyboard=True)
 
+    # Формуємо ReplyKeyboardMarkup
+    return types.ReplyKeyboardMarkup(
+        keyboard=[[btn] for btn in buttons],
+        resize_keyboard=True
+    )
 
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
