@@ -29,7 +29,7 @@ TOKEN = os.getenv("TOKEN")
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
-ADMIN_IDS = [710633503, 716119785]
+ADMIN_IDS = [710633503]
 GROUP_ID = -1002786428793  
 PING_INTERVAL = 6 * 60 * 60 
 
