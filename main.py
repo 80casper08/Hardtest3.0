@@ -361,7 +361,10 @@ async def restart_quiz(callback: CallbackQuery, state: FSMContext):
 
     if not category or category not in sections:
         await state.clear()
-        await callback.message.answer("⚠️ Виникла помилка. Оберіть розділ заново:", reply_markup=main_keyboard())
+        await callback.message.answer(
+            "⚠️ Виникла помилка. Оберіть розділ заново:",
+            reply_markup=main_keyboard(callback.from_user.id)
+        )
         return
 
     questions = sections[category]  # або [:] якщо хочеш всі питання
