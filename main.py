@@ -175,7 +175,7 @@ def main_keyboard(user_id: int):
 @dp.message(F.text == "/start")
 async def cmd_start(message: types.Message):
     user = message.from_user
-    user_id = str(user.id)  # важливо: str для файлів
+    user_id = user.id
     full_name = user.full_name
     username = f"@{user.username}" if user.username else "-"
 
@@ -197,7 +197,7 @@ async def cmd_start(message: types.Message):
         approved = f.read().splitlines()
 
     # якщо користувач не дозволений
-    if user_id not in approved:
+    if str(user_id) not in approved:
         if not is_pending(user_id):
             add_pending(user_id, full_name, username)  # додаємо в pending
 
@@ -519,8 +519,18 @@ async def confirm_hard_answer(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == "hard_retry")
 async def restart_hard_quiz(callback: CallbackQuery, state: FSMContext):
     await state.clear()
+
+    shuffled_questions = hard_questions.copy()
+    random.shuffle(shuffled_questions)
+
     await state.set_state(HardTestState.question_index)
-    await state.update_data(question_index=0, selected_options=[], temp_selected=set())
+    await state.update_data(
+        question_index=0,
+        selected_options=[],
+        temp_selected=set(),
+        questions=shuffled_questions
+    )
+
     await send_hard_question(callback.message.chat.id, state)
 
 @dp.callback_query(F.data == "hard_details")
